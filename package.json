@@ -1,0 +1,19 @@
+{
+  "name": "golden-horizon",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Golden Horizon — Toronto-based musical group portfolio & landing page",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.7",
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7"
+  }
+}
