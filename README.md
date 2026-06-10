@@ -10,8 +10,8 @@ Firebase Hosting via GitHub Actions.
 
 - **Three.js hero** — a golden sun sinking toward a wireframe ocean of animated
   waves with drifting dust particles and pointer parallax
-- **GSAP animations** — preloader-to-hero intro, scroll-triggered reveals,
-  word-by-word scrubbed statement, animated stat counters, infinite marquee
+- **GSAP animations** — preloader-to-hero title intro and scroll-triggered
+  reveals on the contact page
 - **Fully functional contact page** — client-side validation, honeypot
   anti-spam, AJAX submission (no backend needed on static hosting)
 - **Mobile-friendly** — responsive grid layouts, full-screen mobile menu,
