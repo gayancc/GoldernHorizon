@@ -3,77 +3,1618 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Golden Horizon — Toronto's Sound of the Setting Sun</title>
-  <meta name="description" content="Golden Horizon is a Toronto-based musical group blending soulful indie rock with cinematic soundscapes. Book the band for your venue or festival." />
-  <meta property="og:title" content="Golden Horizon — Toronto Musical Group" />
-  <meta property="og:description" content="Soulful indie rock with cinematic soundscapes, born in Toronto." />
+  <title>Golden Horizon — Cinematic Indie from Toronto</title>
+  <meta name="description" content="Golden Horizon is a Toronto-based band blending soulful indie rock with cinematic soundscapes. Step onto the living stage — then get in touch." />
+  <meta property="og:title" content="Golden Horizon — Cinematic Indie from Toronto" />
+  <meta property="og:description" content="Soulful indie rock with cinematic soundscapes, born where the city meets the lake." />
   <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#0b0a08" />
+  <meta name="theme-color" content="#050507" />
+  <meta name="color-scheme" content="dark" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/src/css/style.css" />
-  <script>document.documentElement.classList.add('js');</script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..650;1,9..144,300..650&family=Space+Grotesk:wght@300..600&display=swap" rel="stylesheet" />
+
+  <!-- CDN fallback so this single file also runs without the Vite toolchain.
+       Under Vite (dev/build) bare imports resolve from node_modules and this map is ignored. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
+      "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.13.0/index.js"
+    }
+  }
+  </script>
+
+  <style>
+    /* ============================================================
+       GOLDEN HORIZON — single-file site
+       Layers (z): gl 0 · glow 1 · views 2 · nav 40 · wipe 60 ·
+                   vignette 65 · grain 70 · toast 80 · cursor 90 · loader 100
+       ============================================================ */
+    :root {
+      --bg: #050507;
+      --bg-2: #07060a;
+      --ink: #f4efe6;
+      --mut: rgba(244, 239, 230, 0.6);
+      --mut-2: rgba(244, 239, 230, 0.38);
+      --gold: #f5a83c;
+      --gold-hot: #ffd9a0;
+      --gold-deep: #b06a1d;
+      --gold-line: rgba(245, 168, 60, 0.16);
+      --err: #ff8a7a;
+      --font-d: "Fraunces", Georgia, serif;
+      --font-s: "Space Grotesk", system-ui, sans-serif;
+      --ease-css: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-s);
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    ::selection { background: rgba(245, 168, 60, 0.85); color: #140b02; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+    [tabindex="-1"]:focus { outline: none; }
+
+    /* WebGL fallback when context is unavailable */
+    body.no-gl #gl { display: none; }
+    body.no-gl {
+      background:
+        radial-gradient(120% 70% at 50% 36%, rgba(245, 150, 50, 0.14), transparent 60%),
+        linear-gradient(180deg, #050507 0%, #0a0705 58%, #050507 100%);
+    }
+
+    /* ---------- fixed scene layers ---------- */
+    #gl { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+
+    .glow { position: fixed; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen; }
+    .glow::before {
+      /* molten horizon band */
+      content: ""; position: absolute; left: -10%; right: -10%; top: 52%; height: 24%;
+      background: radial-gradient(58% 100% at 50% 50%, rgba(255, 158, 54, 0.10), rgba(255, 120, 30, 0.03) 52%, transparent 75%);
+      filter: blur(6px);
+    }
+    .glow::after {
+      /* faint cool counter-light from above — cinematic teal/orange grade */
+      content: ""; position: absolute; left: 20%; right: 20%; top: -12%; height: 38%;
+      background: radial-gradient(50% 90% at 50% 0%, rgba(96, 130, 255, 0.05), transparent 70%);
+    }
+
+    .vignette { position: fixed; inset: 0; z-index: 65; pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(5, 5, 7, 0.62), transparent 17%),
+        linear-gradient(0deg, rgba(5, 5, 7, 0.5), transparent 22%),
+        radial-gradient(125% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.72) 100%);
+    }
+
+    .grain { position: fixed; inset: -50%; z-index: 70; pointer-events: none; opacity: 0.055; mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.5'/></svg>");
+      animation: grain 0.9s steps(1) infinite;
+    }
+    @keyframes grain {
+      0%   { transform: translate(0, 0); }
+      13%  { transform: translate(-2%, 1%); }
+      25%  { transform: translate(1%, -2%); }
+      38%  { transform: translate(-1%, 2%); }
+      50%  { transform: translate(2%, 1%); }
+      63%  { transform: translate(-2%, -1%); }
+      75%  { transform: translate(1%, 2%); }
+      88%  { transform: translate(2%, -2%); }
+    }
+
+    #wipe { position: fixed; inset: 0; z-index: 60; pointer-events: none; display: none; width: 100%; height: 100%; }
+
+    /* ---------- navigation ---------- */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 26px clamp(20px, 4vw, 46px);
+    }
+    .logo { display: inline-flex; align-items: center; gap: 12px;
+      font-weight: 500; font-size: 0.78rem; letter-spacing: 0.3em; color: var(--ink);
+    }
+    .logo svg { color: var(--gold); flex: none; }
+    .nlinks { display: flex; gap: clamp(18px, 3vw, 38px); }
+    .nlink { position: relative; font-size: 0.74rem; font-weight: 400; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--mut); padding: 6px 2px; transition: color 0.3s var(--ease-css);
+    }
+    .nlink sup { color: var(--gold); font-size: 0.58rem; margin-right: 7px; letter-spacing: 0.08em; }
+    .nlink::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 1px;
+      background: linear-gradient(90deg, var(--gold), transparent); transition: right 0.45s var(--ease-css);
+    }
+    .nlink:hover, .nlink[aria-current="page"] { color: var(--ink); }
+    .nlink:hover::after, .nlink[aria-current="page"]::after { right: 0; }
+
+    /* ---------- views ---------- */
+    .view { position: fixed; inset: 0; z-index: 2; }
+    .view[hidden] { display: none; }
+
+    /* ===================== HERO ===================== */
+    .view-home { overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .hero-inner { position: relative; text-align: center; padding: 0 22px; max-width: 1100px;
+      margin-bottom: 9vh; will-change: transform; }
+
+    .stagelight { position: absolute; left: 50%; top: 38%; width: 130%; min-width: 560px; aspect-ratio: 2.1 / 1;
+      transform: translate(-50%, -55%); pointer-events: none; z-index: -1;
+      background: radial-gradient(50% 50% at 50% 50%, rgba(255, 188, 96, 0.16), rgba(255, 140, 40, 0.04) 55%, transparent 72%);
+    }
+
+    .eyebrow { display: inline-flex; align-items: center; gap: 16px;
+      font-size: 0.72rem; font-weight: 400; letter-spacing: 0.34em; text-transform: uppercase; color: var(--mut);
+    }
+    .eyebrow .eyebrow-line { display: inline-block; width: 44px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold)); }
+    .eyebrow .eyebrow-line:last-child { background: linear-gradient(90deg, var(--gold), transparent); }
+
+    .title { margin: 26px 0 22px; line-height: 0.95; font-family: var(--font-d); user-select: none; }
+    .t-row { display: block; overflow: hidden; padding: 0.06em 0.1em; }
+    .t1, .t2 { display: inline-block; font-size: clamp(3.1rem, 10.6vw, 9.2rem); letter-spacing: 0.035em; }
+    .t1 { font-weight: 560; filter: drop-shadow(0 0 26px rgba(245, 150, 50, 0.14)); }
+    /* gradient lives on the split chars — a parent-level clip would leave them unpainted */
+    .t1 .ch {
+      background: linear-gradient(98deg, #ffe9c4 8%, #f5a83c 52%, #c87d22 88%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .t2 { font-weight: 330; font-style: italic; color: transparent;
+      -webkit-text-stroke: 1.5px rgba(245, 168, 60, 0.78); margin-top: -0.06em;
+    }
+    .t1 .ch, .t2 .ch { display: inline-block; will-change: transform; }
+
+    .sub { max-width: 46ch; margin: 0 auto; font-size: clamp(0.92rem, 1.4vw, 1.06rem);
+      line-height: 1.75; color: var(--mut); font-weight: 300;
+      text-shadow: 0 1px 16px rgba(0, 0, 0, 0.85);
+    }
+
+    .ctas { display: flex; gap: 18px; justify-content: center; margin-top: 42px; flex-wrap: wrap; }
+
+    .btn { position: relative; display: inline-flex; align-items: center; justify-content: center;
+      padding: 1.05em 2.4em; border-radius: 999px; overflow: hidden;
+      font-family: var(--font-s); font-weight: 500; font-size: 0.78rem;
+      letter-spacing: 0.18em; text-transform: uppercase; will-change: transform;
+    }
+    .btn .btn-label { position: relative; z-index: 2; }
+    .btn-solid { background: linear-gradient(135deg, #ffc468, #e8861f 70%); color: #190f03;
+      box-shadow: 0 8px 34px rgba(232, 134, 31, 0.26);
+      transition: box-shadow 0.35s var(--ease-css);
+    }
+    .btn-solid:hover { box-shadow: 0 10px 48px rgba(245, 158, 50, 0.45); }
+    .btn-sheen { position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.5) 50%, transparent 68%);
+      transform: translateX(-130%); transition: transform 0.8s var(--ease-css);
+    }
+    .btn-solid:hover .btn-sheen { transform: translateX(130%); }
+    .btn-ghost { border: 1px solid rgba(245, 168, 60, 0.45); color: var(--gold-hot);
+      transition: border-color 0.3s var(--ease-css), color 0.3s var(--ease-css);
+    }
+    .btn-ghost::before { content: ""; position: absolute; inset: 0; z-index: 0;
+      background: linear-gradient(180deg, rgba(245, 168, 60, 0.16), rgba(245, 168, 60, 0.05));
+      transform: translateY(101%); transition: transform 0.45s var(--ease-css);
+    }
+    .btn-ghost:hover { border-color: rgba(245, 168, 60, 0.9); color: #ffe9c4; }
+    .btn-ghost:hover::before { transform: translateY(0); }
+    .btn:active { transform: scale(0.97); }
+
+    .hint { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%);
+      display: inline-flex; align-items: center; gap: 10px; white-space: nowrap;
+      font-size: 0.68rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--mut-2);
+    }
+    .hint-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold);
+      box-shadow: 0 0 12px var(--gold); animation: hintpulse 1.8s var(--ease-css) infinite; flex: none;
+    }
+    @keyframes hintpulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.7); opacity: 0.45; } }
+
+    .corner { position: absolute; bottom: 36px; font-size: 0.64rem; letter-spacing: 0.26em;
+      text-transform: uppercase; color: var(--mut-2);
+    }
+    .corner-l { left: clamp(20px, 4vw, 46px); }
+    .corner-r { right: clamp(20px, 4vw, 46px); }
+
+    /* ===================== CONTACT ===================== */
+    .view-contact { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+
+    .beams { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .beam { position: absolute; top: -12%; height: 75vh; width: 26vw; min-width: 220px;
+      filter: blur(26px); transform-origin: 50% 0%; opacity: 0;
+      background: linear-gradient(180deg, rgba(255, 186, 90, 0.30), rgba(255, 150, 50, 0.07) 55%, transparent 80%);
+      clip-path: polygon(42% 0, 58% 0, 86% 100%, 14% 100%);
+    }
+    .beam.b1 { left: 4%; rotate: -9deg; }
+    .beam.b2 { left: 40%; rotate: 3deg;
+      background: linear-gradient(180deg, rgba(120, 150, 255, 0.16), rgba(120, 150, 255, 0.04) 55%, transparent 80%);
+    }
+    .beam.b3 { right: 2%; rotate: 11deg; }
+
+    .contact-wrap { position: relative; z-index: 2; max-width: 1180px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(40px, 6vw, 92px);
+      padding: clamp(110px, 16vh, 170px) clamp(22px, 4.5vw, 52px) 70px;
+      min-height: 100%;
+      align-content: start;
+    }
+
+    .eyebrow-left { justify-content: flex-start; }
+    .c-title { font-family: var(--font-d); font-weight: 420; line-height: 1.04;
+      font-size: clamp(2.4rem, 4.6vw, 4.3rem); margin: 22px 0 26px; letter-spacing: 0.01em;
+    }
+    .c-title em { font-style: italic; font-weight: 330;
+      background: linear-gradient(98deg, #ffe9c4, #f5a83c 60%, #c87d22);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .c-title .kw { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+    .c-title .kwi { display: inline-block; will-change: transform; }
+
+    .c-lead { color: var(--mut); line-height: 1.8; font-size: 0.95rem; max-width: 46ch;
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.75); }
+
+    .c-details { list-style: none; margin-top: 40px; display: grid; gap: 22px; }
+    .c-details li { display: grid; gap: 5px; padding-left: 18px; position: relative; }
+    .c-details li::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 2px; width: 1px;
+      background: linear-gradient(180deg, var(--gold), transparent); }
+    .d-label { font-size: 0.64rem; letter-spacing: 0.26em; text-transform: uppercase; color: var(--mut-2); }
+    .c-details a, .c-details li > span:last-child { font-size: 0.95rem; color: var(--ink); width: fit-content; }
+    .c-details a { border-bottom: 1px solid transparent; transition: border-color 0.3s, color 0.3s; }
+    .c-details a:hover { color: var(--gold-hot); border-color: rgba(245, 168, 60, 0.5); }
+
+    .socials { display: flex; gap: 26px; margin-top: 38px; }
+    .socials a { font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--mut);
+      transition: color 0.3s; position: relative; padding-bottom: 4px;
+    }
+    .socials a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 1px;
+      background: var(--gold); transition: right 0.4s var(--ease-css); }
+    .socials a:hover { color: var(--gold-hot); }
+    .socials a:hover::after { right: 0; }
+
+    /* ---------- form ---------- */
+    .form { position: relative;
+      background: rgba(6, 5, 4, 0.68);
+      border: 1px solid rgba(245, 168, 60, 0.13);
+      border-radius: 18px;
+      padding: 30px clamp(20px, 2.8vw, 36px) 36px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    }
+    .f-tag { font-size: 0.64rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--mut-2);
+      margin-bottom: 28px; padding-bottom: 14px; border-bottom: 1px solid var(--gold-line);
+    }
+    .f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .field { position: relative; margin-bottom: 20px; }
+    .field label { display: block; margin-bottom: 9px; font-size: 0.66rem; font-weight: 500;
+      letter-spacing: 0.22em; text-transform: uppercase; color: var(--mut);
+      transition: color 0.3s var(--ease-css);
+    }
+    .field label span { color: var(--gold); }
+    .field:focus-within label { color: var(--gold-hot); }
+
+    .field input, .field textarea, .field select {
+      width: 100%; padding: 14px 16px; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(245, 168, 60, 0.15);
+      color: var(--ink); font-family: var(--font-s); font-size: 0.93rem; font-weight: 300;
+      caret-color: var(--gold);
+      transition: border-color 0.3s var(--ease-css), box-shadow 0.3s var(--ease-css), background 0.3s var(--ease-css);
+    }
+    .field input::placeholder, .field textarea::placeholder { color: rgba(244, 239, 230, 0.24); }
+    .field textarea { resize: vertical; min-height: 138px; }
+    .field select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23f5a83c' stroke-width='1.6'/></svg>");
+      background-repeat: no-repeat; background-position: right 16px center;
+    }
+    .field select:invalid { color: rgba(244, 239, 230, 0.4); }
+    .field select option { background: #0d0b08; color: var(--ink); }
+
+    /* amplifier-tube ignition on focus */
+    .field input:focus, .field textarea:focus, .field select:focus {
+      outline: none;
+      border-color: rgba(245, 168, 60, 0.85);
+      background: rgba(245, 168, 60, 0.035);
+      box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.5), 0 0 30px rgba(245, 140, 40, 0.2), inset 0 0 22px rgba(245, 140, 40, 0.05);
+      animation: ignite 0.55s linear 1;
+    }
+    @keyframes ignite {
+      0%   { box-shadow: none; border-color: rgba(245, 168, 60, 0.15); }
+      12%  { box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.55), 0 0 26px rgba(245, 140, 40, 0.3); }
+      20%  { box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.1), 0 0 6px rgba(245, 140, 40, 0.06); }
+      34%  { box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.6), 0 0 30px rgba(245, 140, 40, 0.32); }
+      48%  { box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.22), 0 0 10px rgba(245, 140, 40, 0.1); }
+      100% { box-shadow: 0 0 0 1px rgba(245, 168, 60, 0.5), 0 0 30px rgba(245, 140, 40, 0.2); }
+    }
+
+    .field.is-invalid input, .field.is-invalid textarea, .field.is-invalid select {
+      border-color: rgba(255, 122, 107, 0.7);
+      box-shadow: 0 0 0 1px rgba(255, 122, 107, 0.3);
+    }
+    .ferr { min-height: 1.05em; margin-top: 7px; font-size: 0.72rem; color: var(--err); letter-spacing: 0.02em; }
+
+    .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+    .btn-submit { margin-top: 8px; min-width: 230px; transform-origin: 50% 50%; }
+    .kick-ring { position: absolute; inset: -1px; border-radius: inherit; z-index: 0;
+      border: 1px solid rgba(255, 200, 110, 0.9); opacity: 0; pointer-events: none;
+    }
+    .btn-submit[disabled] { opacity: 0.6; cursor: progress; }
+
+    .fstatus { min-height: 1.4em; margin-top: 16px; font-size: 0.84rem; line-height: 1.55; }
+    .fstatus.ok { color: var(--gold-hot); }
+    .fstatus.err { color: var(--err); }
+    .fstatus a { color: var(--gold); border-bottom: 1px solid rgba(245, 168, 60, 0.45); }
+
+    .waveline { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: 120px;
+      z-index: 1; pointer-events: none; }
+    .waveline path { fill: none; stroke: var(--gold); stroke-width: 1.4; }
+    .waveline path:first-child { opacity: 0.16; }
+    .waveline path:last-child { opacity: 0.07; stroke-width: 1; }
+
+    .c-footer { position: relative; z-index: 2; text-align: center;
+      padding: 12px 20px 30px; font-size: 0.64rem; letter-spacing: 0.24em;
+      text-transform: uppercase; color: var(--mut-2);
+    }
+
+    /* ---------- toast ---------- */
+    .toast { position: fixed; left: 0; right: 0; bottom: 40px; z-index: 80;
+      margin: 0 auto; width: fit-content; max-width: 92vw;
+      transform: translateY(90px); opacity: 0; pointer-events: none;
+      padding: 14px 26px; border-radius: 999px; white-space: nowrap;
+      background: rgba(13, 10, 7, 0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(245, 168, 60, 0.35);
+      box-shadow: 0 14px 50px rgba(0, 0, 0, 0.55), 0 0 30px rgba(245, 150, 40, 0.12);
+      font-size: 0.78rem; letter-spacing: 0.06em; color: var(--gold-hot);
+      overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ---------- cursor ---------- */
+    .curring, .curdot { position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none;
+      border-radius: 50%; opacity: 0; will-change: transform;
+    }
+    .curring { width: 34px; height: 34px; margin: -17px 0 0 -17px;
+      border: 1px solid rgba(245, 168, 60, 0.55);
+      transition: width 0.3s var(--ease-css), height 0.3s var(--ease-css), margin 0.3s var(--ease-css),
+                  border-color 0.3s, background 0.3s;
+    }
+    .curring.on { width: 56px; height: 56px; margin: -28px 0 0 -28px;
+      border-color: rgba(245, 168, 60, 0.9); background: rgba(245, 168, 60, 0.07);
+    }
+    .curdot { width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; background: var(--gold);
+      box-shadow: 0 0 10px rgba(245, 168, 60, 0.9);
+    }
+    @media (pointer: coarse) { .curring, .curdot { display: none; } }
+
+    /* ---------- loader (closed stage curtain) ---------- */
+    .loader { position: fixed; inset: 0; z-index: 100; }
+    .lpanel { position: absolute; top: 0; bottom: 0; width: 50.5%; background: #060509; }
+    .lpanel.lp-l { left: 0; box-shadow: inset -60px 0 90px -60px rgba(245, 150, 40, 0.08); }
+    .lpanel.lp-r { right: 0; box-shadow: inset 60px 0 90px -60px rgba(245, 150, 40, 0.08); }
+    .lseam { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; transform-origin: 50% 50%;
+      background: linear-gradient(180deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent);
+      box-shadow: 0 0 22px rgba(245, 168, 60, 0.8);
+    }
+    .lcenter { position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+    }
+    .lname { font-size: 0.74rem; font-weight: 500; letter-spacing: 0.6em; text-indent: 0.6em; color: var(--mut); }
+    .lcount { font-family: var(--font-d); font-style: italic; font-weight: 330;
+      font-size: 2.2rem; color: var(--gold); opacity: 0.9;
+    }
+
+    .svgdefs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+    /* ---------- responsive ---------- */
+    @media (max-width: 960px) {
+      .contact-wrap { grid-template-columns: 1fr; gap: 48px; padding-top: 110px; }
+      .c-details { margin-top: 30px; }
+    }
+    @media (max-width: 640px) {
+      .nlinks { gap: 16px; }
+      .nlink sup { display: none; }
+      .logo span { display: none; }
+      .ctas { flex-direction: column; align-items: center; gap: 14px; }
+      .btn { width: min(320px, 78vw); }
+      .f-row { grid-template-columns: 1fr; gap: 0; }
+      .corner { display: none; }
+      .hint { bottom: 26px; }
+      .toast { white-space: normal; text-align: center; }
+    }
+
+    /* ---------- reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      .grain { animation: none; }
+      .hint-dot { animation: none; }
+      .btn-sheen { display: none; }
+      .field input:focus, .field textarea:focus, .field select:focus { animation: none; }
+    }
+  </style>
+
+  <noscript>
+    <style>
+      .loader, #wipe, .curring, .curdot, .hint { display: none !important; }
+      body { overflow: auto; height: auto; }
+      .view { position: static; }
+      .view[hidden] { display: block; }
+      #view-contact { border-top: 1px solid var(--gold-line); }
+      .view-home { min-height: 90vh; }
+      .beam { opacity: 0.3; }
+    </style>
+  </noscript>
 </head>
+
 <body>
-  <!-- Preloader -->
-  <div class="preloader" id="preloader" aria-hidden="true">
-    <div class="preloader__sun"></div>
-    <p class="preloader__text">GOLDEN HORIZON</p>
-  </div>
+  <canvas id="gl" aria-hidden="true"></canvas>
+  <div class="glow" aria-hidden="true"></div>
 
-  <!-- Grain overlay -->
-  <div class="grain" aria-hidden="true"></div>
-
-  <!-- Navigation -->
   <header class="nav" id="nav">
-    <a href="/" class="nav__logo" aria-label="Golden Horizon home">
-      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
-        <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="2" y1="22" x2="30" y2="22" stroke="currentColor" stroke-width="1.5"/>
+    <a class="logo" href="#home" data-nav="home" aria-label="Golden Horizon — home">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <circle cx="16" cy="14" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+        <line x1="3" y1="22" x2="29" y2="22" stroke="currentColor" stroke-width="1.5" />
       </svg>
-      <span>Golden&nbsp;Horizon</span>
+      <span>GOLDEN&nbsp;HORIZON</span>
     </a>
-    <nav class="nav__links" id="navLinks" aria-label="Primary">
-      <a href="/" class="nav__link" aria-current="page">Home</a>
-      <a href="/contact.html" class="nav__link nav__link--cta">Book Us</a>
+    <nav class="nlinks" aria-label="Primary">
+      <a href="#home" class="nlink" data-nav="home" aria-current="page"><sup>01</sup>Home</a>
+      <a href="#contact" class="nlink" data-nav="contact"><sup>02</sup>Contact</a>
     </nav>
-    <button class="nav__toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
-      <span></span><span></span>
-    </button>
   </header>
 
-  <main id="main">
-    <!-- Hero -->
-    <section class="hero" id="hero">
-      <canvas class="hero__canvas" id="heroCanvas" aria-hidden="true"></canvas>
-      <div class="hero__content">
-        <p class="hero__eyebrow" data-hero-fade>Toronto, Canada — Est. 2019</p>
-        <h1 class="hero__title" aria-label="Golden Horizon">
-          <span class="hero__line"><span class="hero__word">GOLDEN</span></span>
-          <span class="hero__line"><span class="hero__word hero__word--outline">HORIZON</span></span>
+  <main>
+    <!-- ============ VIEW: HERO ============ -->
+    <section class="view view-home" id="view-home" aria-label="Home">
+      <div class="hero-inner" id="heroInner">
+        <div class="stagelight" id="stageLight" aria-hidden="true"></div>
+        <p class="eyebrow" id="heroEyebrow">
+          <span class="eyebrow-line"></span>Cinematic indie rock<span class="eyebrow-line"></span>
+        </p>
+        <h1 class="title" id="heroTitle" aria-label="Golden Horizon">
+          <span class="t-row" aria-hidden="true"><span class="t1" id="t1">GOLDEN</span></span>
+          <span class="t-row" aria-hidden="true"><span class="t2" id="t2">HORIZON</span></span>
         </h1>
-        <p class="hero__sub" data-hero-fade>Soulful indie rock with cinematic soundscapes,<br />born where the city meets the lake.</p>
-        <div class="hero__actions" data-hero-fade>
-          <a href="/contact.html" class="btn btn--solid">Book the Band</a>
-          <a href="mailto:bookings@goldenhorizon.band" class="btn btn--ghost btn--email">bookings@goldenhorizon.band</a>
+        <p class="sub" id="heroSub">Soulful indie rock with cinematic soundscapes — born where the city meets the lake, played like the last light of day.</p>
+        <div class="ctas" id="heroCtas">
+          <button type="button" class="btn btn-solid" id="listenBtn" data-magnetic>
+            <span class="btn-label">Listen Now</span><span class="btn-sheen" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="btn btn-ghost" id="contactBtn" data-magnetic>
+            <span class="btn-label">Contact Us</span>
+          </button>
         </div>
       </div>
+      <p class="hint" id="hint" aria-hidden="true"><span class="hint-dot"></span><span id="hintText">Move your cursor — the stage responds</span></p>
+      <p class="corner corner-l" aria-hidden="true">Toronto · 43.65° N</p>
+      <p class="corner corner-r" aria-hidden="true">Est. 2019</p>
+    </section>
+
+    <!-- ============ VIEW: CONTACT ============ -->
+    <section class="view view-contact" id="view-contact" aria-label="Contact" hidden>
+      <div class="beams" aria-hidden="true">
+        <div class="beam b1"></div><div class="beam b2"></div><div class="beam b3"></div>
+      </div>
+
+      <div class="contact-wrap">
+        <div class="c-intro">
+          <p class="eyebrow eyebrow-left" id="cEyebrow"><span class="eyebrow-line"></span>Backstage — get in touch</p>
+          <h2 class="c-title" id="cTitle" tabindex="-1">Let’s make something <em>golden.</em></h2>
+          <p class="c-lead" id="cLead">Bookings, press, sync licensing or just to say hi — drop us a line and our manager will get back to you within two business days.</p>
+          <ul class="c-details" id="cDetails">
+            <li>
+              <span class="d-label">Bookings &amp; management</span>
+              <a href="mailto:bookings@goldenhorizon.band">bookings@goldenhorizon.band</a>
+            </li>
+            <li>
+              <span class="d-label">Press</span>
+              <a href="mailto:press@goldenhorizon.band">press@goldenhorizon.band</a>
+            </li>
+            <li>
+              <span class="d-label">Based in</span>
+              <span>Toronto, Ontario, Canada</span>
+            </li>
+          </ul>
+          <div class="socials" id="cSocials">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a>
+            <a href="https://open.spotify.com" target="_blank" rel="noopener noreferrer">Spotify</a>
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">YouTube</a>
+          </div>
+        </div>
+
+        <form class="form" id="contactForm" novalidate>
+          <p class="f-tag" id="fTag">Booking &amp; general inquiry</p>
+          <div class="f-row">
+            <div class="field">
+              <label for="name">Name <span aria-hidden="true">*</span></label>
+              <input type="text" id="name" name="name" autocomplete="name" required maxlength="100" placeholder="Your name" />
+              <p class="ferr" id="nameError" role="alert"></p>
+            </div>
+            <div class="field">
+              <label for="email">Email <span aria-hidden="true">*</span></label>
+              <input type="email" id="email" name="email" autocomplete="email" required maxlength="200" placeholder="you@example.com" />
+              <p class="ferr" id="emailError" role="alert"></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="topic">I’m reaching out about <span aria-hidden="true">*</span></label>
+            <select id="topic" name="topic" required>
+              <option value="" selected disabled>Choose a topic…</option>
+              <option value="booking">Booking the band</option>
+              <option value="press">Press / media</option>
+              <option value="sync">Sync licensing</option>
+              <option value="other">Something else</option>
+            </select>
+            <p class="ferr" id="topicError" role="alert"></p>
+          </div>
+          <div class="field">
+            <label for="message">Message <span aria-hidden="true">*</span></label>
+            <textarea id="message" name="message" rows="6" required maxlength="3000" placeholder="Tell us about your event, venue, dates, or anything else…"></textarea>
+            <p class="ferr" id="messageError" role="alert"></p>
+          </div>
+          <!-- Honeypot anti-spam field, hidden from humans -->
+          <input type="text" name="_gotcha" id="gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp" />
+          <button type="submit" class="btn btn-solid btn-submit" id="submitBtn" data-magnetic>
+            <span class="btn-label" id="submitLabel">Send Message</span>
+            <span class="kick-ring" aria-hidden="true"></span>
+          </button>
+          <p class="fstatus" id="formStatus" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <svg class="waveline" id="waveline" aria-hidden="true" preserveAspectRatio="none">
+        <path id="wavepath1" d="" /><path id="wavepath2" d="" />
+      </svg>
+      <footer class="c-footer">© 2026 Golden Horizon · Toronto, Canada</footer>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="footer__inner">
-      <p class="footer__logo">Golden Horizon</p>
-      <p class="footer__meta">Toronto, Canada — © 2026 Golden Horizon. All rights reserved.</p>
-      <nav class="footer__links" aria-label="Footer">
-        <a href="/">Home</a>
-        <a href="/contact.html">Contact</a>
-      </nav>
-    </div>
-  </footer>
+  <canvas id="wipe" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="curring" id="curRing" aria-hidden="true"></div>
+  <div class="curdot" id="curDot" aria-hidden="true"></div>
 
-  <script type="module" src="/src/js/main.js"></script>
+  <!-- Loader: a closed stage curtain that parts open -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="lpanel lp-l" id="lpL"></div>
+    <div class="lpanel lp-r" id="lpR"></div>
+    <div class="lseam" id="lseam"></div>
+    <div class="lcenter" id="lcenter">
+      <p class="lname">GOLDEN HORIZON</p>
+      <p class="lcount" id="lcount">00</p>
+    </div>
+  </div>
+
+  <!-- Turbulence displacement used for the title's smoke-reveal -->
+  <svg class="svgdefs" aria-hidden="true">
+    <defs>
+      <filter id="distortReveal" x="-30%" y="-30%" width="160%" height="160%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.05" numOctaves="2" seed="8" result="noise" />
+        <feDisplacementMap id="dispMap" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { gsap } from 'gsap';
+
+    /* ============================================================
+       0. Environment + custom easing
+       ============================================================ */
+    const COARSE = matchMedia('(pointer: coarse)').matches;
+    const rmQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    let REDUCED = rmQuery.matches;
+
+    // Bespoke curves — no stock ease-in-out anywhere.
+    gsap.registerEase('gh.in', p => Math.pow(p, 2.6));                                     // gravity fall-in
+    gsap.registerEase('gh.out', p => 1 - Math.pow(1 - p, 3.4));                            // hard decel
+    gsap.registerEase('gh.flow', p => 1 - Math.pow(1 - p, 2.6));                           // liquid settle
+    gsap.registerEase('gh.inertia', p => (1 - Math.exp(-5.2 * p)) / (1 - Math.exp(-5.2))); // momentum decay
+    gsap.registerEase('gh.swift', p => { const c1 = 1.9, c3 = c1 + 1, q = p - 1; return 1 + c3 * q * q * q + c1 * q * q; }); // overshoot snap
+    gsap.registerEase('gh.elastic', p => p === 0 ? 0 : p === 1 ? 1 :
+      Math.pow(2, -8 * p) * Math.sin((p - 0.105) * (2 * Math.PI) / 0.42) + 1);             // soft spring
+
+    const $ = s => document.querySelector(s);
+    const $$ = s => [...document.querySelectorAll(s)];
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+
+    /* ============================================================
+       1. Text splitting (chars for hero, words for contact)
+       ============================================================ */
+    function splitChars(el) {
+      const text = el.textContent;
+      el.textContent = '';
+      return [...text].map(c => {
+        const s = document.createElement('span');
+        s.className = 'ch';
+        s.textContent = c;
+        el.appendChild(s);
+        return s;
+      });
+    }
+    function splitWords(el) {
+      const nodes = [...el.childNodes];
+      el.textContent = '';
+      const inners = [];
+      const addWord = (word, intoEm) => {
+        const mask = document.createElement('span'); mask.className = 'kw';
+        const inner = document.createElement('span'); inner.className = 'kwi';
+        if (intoEm) { const em = document.createElement('em'); em.textContent = word; inner.appendChild(em); }
+        else inner.textContent = word;
+        mask.appendChild(inner); el.appendChild(mask);
+        el.appendChild(document.createTextNode(' '));
+        inners.push(inner);
+      };
+      nodes.forEach(node => {
+        const isEm = node.nodeName === 'EM';
+        (node.textContent || '').split(/\s+/).filter(Boolean).forEach(w => addWord(w, isEm));
+      });
+      return inners;
+    }
+    const heroChars1 = splitChars($('#t1'));
+    const heroChars2 = splitChars($('#t2'));
+    const contactWords = splitWords($('#cTitle'));
+    if (COARSE) $('#hintText').textContent = 'Touch the stage — it responds';
+
+    /* ============================================================
+       2. WebGL — the living sound membrane
+       ============================================================ */
+    const CAM = { x: 0, y: 10, z: 26 };        // resting camera (parallax offsets added on top)
+    const Z_NEAR = 16, Z_FAR = -105;
+
+    const vertexShader = /* glsl */`
+      attribute vec3 aSeed;
+      attribute vec3 aDust;
+      uniform float uTime, uMode, uKick, uBreath, uTear, uPointerOn, uReduced, uPixelRatio, uScale, uOpacity;
+      uniform vec2  uPointer;
+      uniform vec4  uRipples[6];
+      varying float vBright, vCool, vAlpha;
+
+      // Ashima 3D simplex noise
+      vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+      vec4 mod289(vec4 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
+      vec4 permute(vec4 x){ return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r){ return 1.79284291400159 - 0.85373472095314 * r; }
+      float snoise(vec3 v){
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod289(i);
+        vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0))
+              + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        float n_ = 0.142857142857;
+        vec3 ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ * ns.x + ns.yyyy;
+        vec4 y = y_ * ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+        vec4 s0 = floor(b0) * 2.0 + 1.0;
+        vec4 s1 = floor(b1) * 2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+        vec3 p0 = vec3(a0.xy, h.x);
+        vec3 p1 = vec3(a0.zw, h.y);
+        vec3 p2 = vec3(a1.xy, h.z);
+        vec3 p3 = vec3(a1.zw, h.w);
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+      }
+
+      void main() {
+        float t = uTime;
+        vec3 seed = aSeed;
+        float calm = mix(1.0, 0.16, uReduced);   // reduced-motion damping
+        float live = 1.0 - uMode;                // membrane-ness (0 in dust mode)
+
+        /* ---- membrane: breathing liquid-metal surface ---- */
+        vec2 P = position.xz;
+        vec2 warp = vec2(
+          snoise(vec3(P * 0.018, t * 0.05)),
+          snoise(vec3(P * 0.018 + 31.7, t * 0.05)));
+        float swell = snoise(vec3(P * 0.034 + warp * 0.55, t * 0.10));
+        float y = swell * (1.1 + 2.6 * uBreath) * calm;
+
+        // bass kick radiating from center
+        float lp = length(P);
+        y += uKick * sin(lp * 0.30 - t * 2.2) * exp(-lp * 0.012) * 2.1 * calm;
+
+        // invisible travelling sound waves, masked so they drift in and out
+        float mask = smoothstep(-0.1, 0.9, snoise(vec3(P * 0.016, t * 0.04 + 53.0)));
+        y += (sin(dot(P, vec2(0.14, 0.04)) - t * 1.05)
+            + sin(dot(P, vec2(-0.05, 0.17)) - t * 0.74)) * 0.5 * mask * calm;
+
+        /* ---- pointer: the membrane tears open into light ---- */
+        vec2 toP = P - uPointer;
+        float d = length(toP);
+        float hole = (1.0 - smoothstep(0.0, 13.0, d)) * uPointerOn * live;
+        float tearAmt = hole * hole * (0.45 + uTear) * mix(1.0, 0.3, uReduced);
+        vec2 push = (toP / max(d, 0.001)) * tearAmt * 7.0;
+        y += hole * (1.1 + uTear * 4.5) * (0.55 + 0.45 * sin(d * 0.8 - t * 3.4)) * calm;
+        float br = hole * (0.5 + uTear * 1.0);
+
+        /* ---- ripple shockwaves ---- */
+        for (int i = 0; i < 6; i++) {
+          vec4 r = uRipples[i];
+          if (r.w > 0.001) {
+            float rd = distance(P, r.xy);
+            float age = max(t - r.z, 0.0);
+            float front = exp(-abs(rd - age * 16.0) * 0.11);
+            float env = exp(-age * 1.5) * exp(-rd * 0.04);
+            float ring = sin(rd * 0.55 - age * 7.5);
+            y += ring * env * front * r.w * 5.5 * live * calm;
+            br += max(ring, 0.0) * env * front * r.w * 0.55 * live;
+          }
+        }
+
+        // magnetic dust micro-motion, pulled harder on each beat
+        vec3 jitter = vec3(
+          snoise(vec3(P * 0.12, t * 0.5) + seed * 7.0),
+          snoise(vec3(P * 0.12 + 13.1, t * 0.5)),
+          snoise(vec3(P * 0.12 + 71.3, t * 0.5))) * (0.22 + uKick * 0.85) * calm;
+
+        vec3 mem = vec3(P.x + push.x, y, P.y + push.y) + jitter * (0.35 + seed.y * 0.65);
+
+        /* ---- dust mode: backstage neon dust drifting upward ---- */
+        vec3 dust = aDust;
+        dust.y = -12.0 + mod(aDust.y + 12.0 + t * (0.5 + seed.z * 0.9) * calm, 28.0);
+        dust.x += sin(t * 0.26 * calm + seed.x * 6.2831) * 1.8;
+        dust.z += cos(t * 0.21 * calm + seed.y * 6.2831) * 1.8;
+
+        // staggered per-particle morph between the two homes, with a swirl on the way
+        float m = smoothstep(seed.x * 0.7, seed.x * 0.7 + 0.3, uMode);
+        vec3 pos = mix(mem, dust, m);
+        pos += sin(m * 3.14159) * vec3(
+          snoise(vec3(seed.xy * 8.0, t * 0.3)),
+          snoise(vec3(seed.yz * 8.0, t * 0.3 + 9.0)),
+          snoise(vec3(seed.zx * 8.0, t * 0.3 + 17.0))) * 4.5;
+
+        float twinkle = mix(1.0, 0.45 + 0.55 * sin(t * (0.7 + seed.z * 2.2) + seed.x * 40.0), m);
+
+        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+        float dist = max(-mv.z, 0.1);
+
+        // molten horizon band far away
+        float hb = smoothstep(70.0, 105.0, dist) * (1.0 - smoothstep(105.0, 128.0, dist));
+
+        vBright = (0.18 + 0.5 * seed.z + br + hb * 0.26 * live + uKick * 0.08 * live) * twinkle;
+        vCool = step(0.92, seed.y);
+
+        float farFade = smoothstep(128.0, 38.0, dist);
+        float nearFade = smoothstep(6.0, 16.0, dist);
+        // backstage keeps a small fraction of the particles — sparse drifting dust, not a storm
+        float keep = mix(1.0, step(0.86, seed.x), m);
+        vAlpha = farFade * nearFade * uOpacity * keep * mix(1.0, 0.6, m);
+
+        float size = (0.5 + seed.x * 1.15) * uScale * (1.0 + br * 0.7) * mix(1.0, 0.82, m);
+        gl_PointSize = clamp(size * uPixelRatio * (240.0 / dist), 0.6, 7.5 * uPixelRatio);
+        gl_Position = projectionMatrix * mv;
+      }
+    `;
+
+    const fragmentShader = /* glsl */`
+      varying float vBright, vCool, vAlpha;
+      void main() {
+        vec2 uv = gl_PointCoord - 0.5;
+        float r2 = dot(uv, uv);
+        if (r2 > 0.25) discard;
+        float core = smoothstep(0.25, 0.0, r2);
+        float halo = exp(-r2 * 10.0);
+        vec3 gold = vec3(1.0, 0.57, 0.16);
+        vec3 hot  = vec3(1.0, 0.92, 0.74);
+        vec3 cool = vec3(0.42, 0.58, 1.0);
+        vec3 col = mix(gold, hot, clamp(vBright - 0.75, 0.0, 1.0));
+        col = mix(col, cool, vCool * 0.8);
+        col *= 0.2 + vBright * 0.52;
+        float a = (core * 0.3 + halo * 0.32) * vAlpha;
+        gl_FragColor = vec4(col, a);
+      }
+    `;
+
+    let glOK = false, LOWPOWER = false, renderer, scene, camera, points, uniforms, dprCap;
+
+    function particleCount(scale = 1) {
+      if (LOWPOWER) return Math.round(9000 * scale);
+      const a = W() * H();
+      const n = COARSE
+        ? Math.min(22000, Math.max(9000, a / 22))
+        : Math.min(90000, Math.max(26000, a / 22));
+      return Math.round(n * scale);
+    }
+
+    function buildGeometry(count) {
+      const pos = new Float32Array(count * 3);
+      const seed = new Float32Array(count * 3);
+      const dust = new Float32Array(count * 3);
+      const sN = CAM.z - Z_NEAR, sF = CAM.z - Z_FAR;
+      for (let i = 0; i < count; i++) {
+        // uniform surface density over the camera-facing trapezoid of the plane
+        const u = Math.random();
+        const s = Math.sqrt(u * (sF * sF - sN * sN) + sN * sN);
+        const halfW = s * 0.62 * 2.05;
+        pos[i * 3] = (Math.random() * 2 - 1) * halfW;
+        pos[i * 3 + 1] = 0;
+        pos[i * 3 + 2] = CAM.z - s;
+        seed[i * 3] = Math.random();
+        seed[i * 3 + 1] = Math.random();
+        seed[i * 3 + 2] = Math.random();
+        dust[i * 3] = (Math.random() * 2 - 1) * 46;
+        dust[i * 3 + 1] = -12 + Math.random() * 27;
+        dust[i * 3 + 2] = -36 + Math.random() * 54;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 3));
+      g.setAttribute('aDust', new THREE.BufferAttribute(dust, 3));
+      return g;
+    }
+
+    function initGL() {
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas: $('#gl'), antialias: false, alpha: false, powerPreference: 'high-performance',
+        });
+      } catch {
+        document.body.classList.add('no-gl');
+        return;
+      }
+      // software rasterizers (headless/VM/old drivers) get a drastically lighter scene
+      try {
+        const glCtx = renderer.getContext();
+        const info = glCtx.getExtension('WEBGL_debug_renderer_info');
+        const rname = info ? String(glCtx.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+        LOWPOWER = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(rname);
+      } catch { /* renderer name unavailable — assume hardware */ }
+
+      dprCap = LOWPOWER ? 1 : Math.min(window.devicePixelRatio || 1, COARSE ? 1.8 : 2);
+      renderer.setPixelRatio(dprCap);
+      renderer.setSize(W(), H());
+      renderer.setClearColor(0x050507, 1);
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(60, W() / H(), 0.1, 320);
+      camera.position.set(CAM.x, CAM.y + 1.3, CAM.z + 8); // pre-dolly pose; intro pushes in
+
+      uniforms = {
+        uTime: { value: 0 },
+        uMode: { value: location.hash === '#contact' ? 1 : 0 },
+        uKick: { value: 0 },
+        uBreath: { value: 0.5 },
+        uTear: { value: 0 },
+        uPointerOn: { value: 0 },
+        uReduced: { value: REDUCED ? 1 : 0 },
+        uPixelRatio: { value: dprCap },
+        uScale: { value: LOWPOWER ? 1.35 : COARSE ? 0.8 : 0.9 },
+        uOpacity: { value: 0 },
+        uPointer: { value: new THREE.Vector2(0, 6) },
+        uRipples: { value: Array.from({ length: 6 }, () => new THREE.Vector4(0, 0, -100, 0)) },
+      };
+      const material = new THREE.ShaderMaterial({
+        uniforms, vertexShader, fragmentShader,
+        transparent: true, depthWrite: false, depthTest: false,
+        blending: THREE.AdditiveBlending,
+      });
+      points = new THREE.Points(buildGeometry(particleCount()), material);
+      points.frustumCulled = false;
+      scene.add(points);
+
+      renderer.domElement.addEventListener('webglcontextlost', e => {
+        e.preventDefault();
+        document.body.classList.add('no-gl');
+        glOK = false;
+      });
+      glOK = true;
+    }
+    initGL();
+
+    /* ============================================================
+       3. Rhythm engine — the membrane plays itself
+       ============================================================ */
+    const beat = { kick: 0, next: 1.4, count: 0, interval: 60 / 74 };
+    function updateBeat(time, dt) {
+      beat.kick *= Math.exp(-dt * 3.2);
+      if (REDUCED) return;
+      if (time >= beat.next) {
+        beat.count++;
+        beat.kick = beat.count % 4 === 0 ? 1.0 : 0.62;
+        beat.next = time + beat.interval * (0.95 + Math.random() * 0.1);
+        if (beat.count % 8 === 0 && glOK && view === 'home') {
+          spawnRipple((Math.random() * 2 - 1) * 40, -10 - Math.random() * 40, 0.45 + Math.random() * 0.3);
+        }
+      }
+    }
+
+    /* ============================================================
+       4. Pointer physics — magnetic spring, tear, ripples
+       ============================================================ */
+    const pointer = {
+      tx: 0, tz: 6, x: 0, z: 6, vx: 0, vz: 0,   // world-space spring on the membrane plane
+      nx: 0, ny: 0,                              // NDC for parallax
+      on: 0, tear: 0, tearTarget: 0,
+      lastRX: 0, lastRZ: 6, lastRT: 0,
+      sx: -100, sy: -100,                        // raw screen px for the cursor
+    };
+    let interacted = false;
+    const raycaster = new THREE.Raycaster();
+    const ndcV = new THREE.Vector2();
+
+    function pointerToPlane(cx, cy) {
+      if (!glOK) return;
+      ndcV.set((cx / W()) * 2 - 1, -(cy / H()) * 2 + 1);
+      raycaster.setFromCamera(ndcV, camera);
+      const o = raycaster.ray.origin, dir = raycaster.ray.direction;
+      if (Math.abs(dir.y) < 1e-4) return;
+      const t = -o.y / dir.y;
+      if (t <= 0) return;
+      pointer.tx = o.x + dir.x * t;
+      pointer.tz = o.z + dir.z * t;
+    }
+
+    function spawnRipple(x, z, strength) {
+      if (!glOK) return;
+      const slots = uniforms.uRipples.value;
+      let idx = 0, oldest = Infinity;
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i].z < oldest) { oldest = slots[i].z; idx = i; }
+      }
+      slots[idx].set(x, z, simTime, strength);
+    }
+
+    addEventListener('pointermove', e => {
+      pointer.sx = e.clientX; pointer.sy = e.clientY;
+      pointer.nx = (e.clientX / W()) * 2 - 1;
+      pointer.ny = (e.clientY / H()) * 2 - 1;
+      pointer.on = 1;
+      pointerToPlane(e.clientX, e.clientY);
+      if (!interacted && Math.abs(pointer.nx) > 0.18) dismissHint();
+    }, { passive: true });
+
+    addEventListener('pointerdown', e => {
+      pointerToPlane(e.clientX, e.clientY);
+      pointer.on = 1;
+      if (view === 'home' && !REDUCED) {
+        spawnRipple(pointer.tx, pointer.tz, 1.5);
+        beat.kick = Math.max(beat.kick, 0.9);
+      }
+      dismissHint();
+    }, { passive: true });
+
+    addEventListener('blur', () => { pointer.on = 0; });
+    document.documentElement.addEventListener('pointerleave', () => { pointer.on = 0; });
+
+    function updatePointer(dt) {
+      // underdamped spring → magnetic lag with inertia
+      const k = 46, damp = Math.exp(-dt * 7.2);
+      pointer.vx += (pointer.tx - pointer.x) * k * dt;
+      pointer.vz += (pointer.tz - pointer.z) * k * dt;
+      pointer.vx *= damp; pointer.vz *= damp;
+      pointer.x += pointer.vx * dt;
+      pointer.z += pointer.vz * dt;
+
+      const speed = Math.hypot(pointer.vx, pointer.vz);
+      pointer.tearTarget = Math.max(pointer.tearTarget * Math.exp(-dt * 2.2), Math.min(1, speed * 0.028));
+      pointer.tear += (pointer.tearTarget - pointer.tear) * Math.min(1, dt * 5);
+
+      // shockwaves while sweeping fast across the membrane
+      const moved = Math.hypot(pointer.tx - pointer.lastRX, pointer.tz - pointer.lastRZ);
+      if (!REDUCED && view === 'home' && moved > 9 && simTime - pointer.lastRT > 0.09 && speed > 14) {
+        spawnRipple(pointer.tx, pointer.tz, Math.min(0.85, speed * 0.012));
+        pointer.lastRX = pointer.tx; pointer.lastRZ = pointer.tz; pointer.lastRT = simTime;
+      }
+
+      if (!glOK) return;
+      uniforms.uPointer.value.set(pointer.x, pointer.z);
+      uniforms.uPointerOn.value += (pointer.on - uniforms.uPointerOn.value) * Math.min(1, dt * 3.5);
+      uniforms.uTear.value = pointer.tear;
+    }
+
+    /* ============================================================
+       5. Liquid sound-wave wipe (2D canvas page transition)
+       ============================================================ */
+    const wipeCanvas = $('#wipe');
+    const wctx = wipeCanvas.getContext('2d');
+    const wipe = { active: false, q: 0 };
+    let wipeDpr = 1;
+
+    function sizeWipe() {
+      wipeDpr = Math.min(window.devicePixelRatio || 1, 2);
+      wipeCanvas.width = Math.round(W() * wipeDpr);
+      wipeCanvas.height = Math.round(H() * wipeDpr);
+    }
+    sizeWipe();
+
+    function drawWipe(time) {
+      const w = W(), h = H();
+      wctx.setTransform(wipeDpr, 0, 0, wipeDpr, 0, 0);
+      wctx.clearRect(0, 0, w, h);
+
+      const q = wipe.q;
+      const cover = Math.min(q, 1), reveal = Math.max(q - 1, 0);
+      const env = Math.sin(Math.min(Math.max(q / 2, 0), 1) * Math.PI);
+      const amp = env * h * 0.075;
+      const pad = h * 0.2;
+      const lead = (h + pad) - cover * (h + pad * 2);   // top boundary of the sheet
+      const trail = (h + pad) - reveal * (h + pad * 2); // bottom boundary of the sheet
+
+      const edge = (x, base, ph) =>
+        base + amp * (Math.sin(x * 0.0042 + ph + time * 2.2) * 0.55
+                    + Math.sin(x * 0.0105 - ph * 1.7 + time * 3.6) * 0.30
+                    + Math.sin(x * 0.027 + time * 5.1) * 0.15);
+
+      const steps = 56;
+      wctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const x = (w / steps) * i, y = edge(x, lead, 0.8);
+        i ? wctx.lineTo(x, y) : wctx.moveTo(x, y);
+      }
+      for (let i = steps; i >= 0; i--) {
+        const x = (w / steps) * i;
+        wctx.lineTo(x, edge(x, trail, 2.3));
+      }
+      wctx.closePath();
+      wctx.fillStyle = '#07060a';
+      wctx.fill();
+
+      // glowing waveform edge + echo lines inside the sheet
+      const activeBase = q < 1 ? lead : trail;
+      const ph = q < 1 ? 0.8 : 2.3;
+      const inward = q < 1 ? 1 : -1;
+      for (let e = 0; e < 3; e++) {
+        wctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const x = (w / steps) * i;
+          const y = edge(x, activeBase + e * 30 * inward, ph + e * 0.55);
+          i ? wctx.lineTo(x, y) : wctx.moveTo(x, y);
+        }
+        wctx.strokeStyle = e === 0 ? 'rgba(255,178,72,0.95)' : `rgba(255,160,60,${0.3 - e * 0.11})`;
+        wctx.lineWidth = e === 0 ? 2 : 1;
+        wctx.shadowColor = 'rgba(255,150,40,0.85)';
+        wctx.shadowBlur = e === 0 ? 26 : 0;
+        wctx.stroke();
+      }
+      wctx.shadowBlur = 0;
+    }
+
+    /* ============================================================
+       6. View manager — hash routing + transitions
+       ============================================================ */
+    let view = location.hash === '#contact' ? 'contact' : 'home';
+    let transitioning = false;
+    let suppressHash = false;
+    let heroPlayed = false, contactPlayed = false;
+
+    const viewEls = { home: $('#view-home'), contact: $('#view-contact') };
+
+    function applyViewDOM(name) {
+      const off = name === 'home' ? 'contact' : 'home';
+      viewEls[off].hidden = true;
+      viewEls[off].inert = true;
+      viewEls[name].hidden = false;
+      viewEls[name].inert = false;
+      viewEls[name].scrollTop = 0;
+      $$('.nlink').forEach(a => {
+        if (a.dataset.nav === name) a.setAttribute('aria-current', 'page');
+        else a.removeAttribute('aria-current');
+      });
+      document.title = name === 'contact'
+        ? 'Contact — Golden Horizon'
+        : 'Golden Horizon — Cinematic Indie from Toronto';
+      view = name;
+    }
+    applyViewDOM(view);
+
+    function setHash(name) {
+      suppressHash = true;
+      location.hash = name === 'contact' ? '#contact' : '#home';
+      setTimeout(() => { suppressHash = false; }, 60);
+    }
+
+    function tweenMode(name, instant = false) {
+      if (!glOK) return;
+      const target = name === 'contact' ? 1 : 0;
+      gsap.killTweensOf(uniforms.uMode);
+      if (instant) uniforms.uMode.value = target;
+      else gsap.to(uniforms.uMode, { value: target, duration: 1.7, ease: 'gh.flow' });
+    }
+
+    function go(name, { fromHash = false } = {}) {
+      if (name === view || transitioning) return;
+      if (!fromHash) setHash(name);
+
+      if (REDUCED) {
+        transitioning = true;
+        gsap.to(viewEls[view], {
+          autoAlpha: 0, duration: 0.28, ease: 'none', onComplete() {
+            gsap.set(viewEls[view === 'home' ? 'home' : 'contact'], { clearProps: 'opacity,visibility' });
+            applyViewDOM(name);
+            tweenMode(name, true);
+            gsap.fromTo(viewEls[name], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.34, ease: 'none' });
+            playReveal(name);
+            transitioning = false;
+          },
+        });
+        return;
+      }
+
+      transitioning = true;
+      wipe.active = true;
+      wipe.q = 0;
+      wipeCanvas.style.display = 'block';
+      gsap.timeline({
+        onComplete() {
+          wipe.active = false;
+          wipeCanvas.style.display = 'none';
+          transitioning = false;
+        },
+      })
+        .to(wipe, {
+          q: 1, duration: 0.74, ease: 'gh.in', onComplete() {
+            applyViewDOM(name);
+            tweenMode(name);
+            playReveal(name);
+          },
+        })
+        .to(wipe, { q: 2, duration: 0.98, ease: 'gh.out', delay: 0.14 });
+    }
+
+    addEventListener('hashchange', () => {
+      if (suppressHash) return;
+      const target = location.hash === '#contact' ? 'contact' : 'home';
+      if (target !== view) go(target, { fromHash: true });
+    });
+
+    $$('[data-nav]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); go(a.dataset.nav); }));
+    $('#contactBtn').addEventListener('click', () => go('contact'));
+
+    /* ============================================================
+       7. Reveal timelines
+       ============================================================ */
+    const dispMap = $('#dispMap');
+    const heroFadeBits = ['#heroEyebrow', '#heroSub', '#heroCtas .btn', '.corner', '#hint'];
+    const contactBits = ['#cEyebrow', '#cLead', '#cDetails li', '#cSocials a', '#fTag', '#contactForm .field', '#submitBtn', '.c-footer'];
+
+    function primeHidden() {
+      gsap.set(heroFadeBits.join(','), { autoAlpha: 0 });
+      gsap.set('#stageLight', { autoAlpha: 0, scale: 0.5, transformOrigin: '50% 50%' });
+      gsap.set([...heroChars1, ...heroChars2], { yPercent: 112, autoAlpha: 0 });
+      gsap.set('#nav', { autoAlpha: 0, y: -16 });
+      gsap.set(contactBits.join(','), { autoAlpha: 0 });
+      gsap.set(contactWords, { yPercent: 115, rotate: 5 });
+      gsap.set('#cDetails li', { x: -14 });
+      gsap.set('#cLead', { y: 16 });
+      gsap.set('.beam', { opacity: 0 });
+      gsap.set('#waveline', { autoAlpha: 0 });
+    }
+
+    function playReveal(name, full = false) {
+      if (name === 'home') heroReveal(full || !heroPlayed);
+      else contactReveal(full || !contactPlayed);
+    }
+
+    function heroReveal(full) {
+      heroPlayed = true;
+      if (REDUCED) {
+        gsap.set([...heroChars1, ...heroChars2], { yPercent: 0, autoAlpha: 1 });
+        gsap.to([...heroFadeBits, '#stageLight', '#nav'].join(','), { autoAlpha: 1, scale: 1, y: 0, duration: 0.5, ease: 'none', stagger: 0.04 });
+        if (glOK) { uniforms.uOpacity.value = 1; camera.position.set(CAM.x, CAM.y, CAM.z); }
+        return;
+      }
+      const tl = gsap.timeline();
+      tl.timeScale(full ? 1 : 1.7);
+
+      if (glOK) {
+        tl.to(uniforms.uOpacity, { value: 1, duration: 2.0, ease: 'gh.out' }, 0)
+          .to(camera.position, { y: CAM.y, z: CAM.z, duration: 2.4, ease: 'gh.inertia' }, 0);
+      }
+      tl.to('#stageLight', { autoAlpha: 1, scale: 1, duration: 1.6, ease: 'gh.out' }, 0.45);
+
+      if (full) {
+        // smoke-and-stage-light distortion reveal
+        const d = { v: 150 };
+        gsap.set('#heroTitle', { filter: 'url(#distortReveal)' });
+        tl.to(d, {
+          v: 0, duration: 1.5, ease: 'gh.out',
+          onUpdate: () => dispMap.setAttribute('scale', d.v.toFixed(1)),
+          onComplete: () => gsap.set('#heroTitle', { filter: 'none' }),
+        }, 0.55);
+        tl.fromTo('.t-row', { filter: 'blur(16px)' }, { filter: 'blur(0px)', duration: 1.25, ease: 'gh.out', stagger: 0.12 }, 0.55);
+      }
+      tl.to(heroChars1, { yPercent: 0, autoAlpha: 1, duration: 1.0, ease: 'gh.swift', stagger: 0.045 }, full ? 0.6 : 0.1)
+        .to(heroChars2, { yPercent: 0, autoAlpha: 1, duration: 1.0, ease: 'gh.swift', stagger: 0.04 }, full ? 0.74 : 0.2)
+        .fromTo('#heroEyebrow', { autoAlpha: 0, letterSpacing: '0.55em' }, { autoAlpha: 1, letterSpacing: '0.34em', duration: 0.9, ease: 'gh.out' }, full ? 1.25 : 0.35)
+        .fromTo('#heroSub', { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.85, ease: 'gh.swift' }, full ? 1.4 : 0.45)
+        .fromTo('#heroCtas .btn', { autoAlpha: 0, y: 26, scale: 0.92 }, { autoAlpha: 1, y: 0, scale: 1, duration: 1.0, ease: 'gh.elastic', stagger: 0.1 }, full ? 1.55 : 0.55)
+        .to('#nav', { autoAlpha: 1, y: 0, duration: 0.7, ease: 'gh.out' }, full ? 1.7 : 0.6)
+        .to('.corner', { autoAlpha: 1, duration: 0.7, ease: 'gh.out', stagger: 0.08 }, full ? 1.8 : 0.7);
+      if (!interacted) tl.to('#hint', { autoAlpha: 1, duration: 0.8, ease: 'gh.out' }, full ? 2.3 : 0.9);
+    }
+
+    let beamTweens = [];
+    function contactReveal(full) {
+      contactPlayed = true;
+      if (REDUCED) {
+        gsap.set(contactWords, { yPercent: 0, rotate: 0 });
+        gsap.set(['#cDetails li', '#cLead'].join(','), { x: 0, y: 0 });
+        gsap.to([contactBits.join(','), '#waveline', '#nav'].join(','), { autoAlpha: 1, duration: 0.5, ease: 'none', stagger: 0.03 });
+        gsap.to('.beam', { opacity: 0.3, duration: 0.6, ease: 'none' });
+        if (glOK) uniforms.uOpacity.value = 1;
+        return;
+      }
+      const tl = gsap.timeline();
+      tl.timeScale(full ? 1 : 1.5);
+      if (glOK) tl.to(uniforms.uOpacity, { value: 1, duration: 1.4, ease: 'gh.out' }, 0);
+      tl.to('#nav', { autoAlpha: 1, y: 0, duration: 0.6, ease: 'gh.out' }, 0)
+        .to('.beam.b1', { opacity: 0.5, duration: 1.8, ease: 'gh.out' }, 0.15)
+        .to('.beam.b2', { opacity: 0.4, duration: 1.8, ease: 'gh.out' }, 0.3)
+        .to('.beam.b3', { opacity: 0.45, duration: 1.8, ease: 'gh.out' }, 0.45)
+        .to('#cEyebrow', { autoAlpha: 1, duration: 0.7, ease: 'gh.out' }, 0.2)
+        .to(contactWords, { yPercent: 0, rotate: 0, duration: 0.95, ease: 'gh.swift', stagger: 0.065 }, 0.3)
+        .to('#cLead', { autoAlpha: 1, y: 0, duration: 0.7, ease: 'gh.out' }, 0.75)
+        .to('#cDetails li', { autoAlpha: 1, x: 0, duration: 0.7, ease: 'gh.swift', stagger: 0.09 }, 0.85)
+        .to('#cSocials a', { autoAlpha: 1, duration: 0.6, ease: 'gh.out', stagger: 0.07 }, 1.05)
+        .to('#fTag', { autoAlpha: 1, duration: 0.6, ease: 'gh.out' }, 0.55)
+        .fromTo('#contactForm .field', { autoAlpha: 0, y: 26, skewY: 1.8 }, { autoAlpha: 1, y: 0, skewY: 0, duration: 0.85, ease: 'gh.swift', stagger: 0.08 }, 0.65)
+        .fromTo('#submitBtn', { autoAlpha: 0, scale: 0.85 }, { autoAlpha: 1, scale: 1, duration: 1.0, ease: 'gh.elastic' }, 1.15)
+        .to('.c-footer', { autoAlpha: 1, duration: 0.8, ease: 'gh.out' }, 1.3)
+        .to('#waveline', { autoAlpha: 1, duration: 1.2, ease: 'gh.out' }, 1.2)
+        .add(() => { startKickPulse(); swayBeams(); $('#cTitle').focus({ preventScroll: true }); }, 1.0);
+    }
+
+    function swayBeams() {
+      if (beamTweens.length || REDUCED) return;
+      beamTweens = $$('.beam').map((b, i) =>
+        gsap.to(b, {
+          rotation: `+=${i % 2 ? -2.4 : 2.4}`, duration: 9 + i * 2.4,
+          yoyo: true, repeat: -1, ease: 'sine.inOut',
+        }));
+    }
+
+    /* ============================================================
+       8. Kick-drum submit pulse
+       ============================================================ */
+    let pulseTl = null;
+    function startKickPulse() {
+      if (pulseTl || REDUCED) return;
+      pulseTl = gsap.timeline({ repeat: -1, repeatDelay: 0.66 })
+        .to('#submitBtn', { scale: 1.045, duration: 0.09, ease: 'gh.in' })
+        .to('#submitBtn', { scale: 1, duration: 0.6, ease: 'elastic.out(1.4, 0.36)' })
+        .fromTo('.kick-ring', { opacity: 0.55, scale: 1 }, { opacity: 0, scale: 1.55, duration: 0.75, ease: 'gh.out' }, 0.02);
+    }
+
+    /* ============================================================
+       9. Contact form — validation + FormSubmit AJAX
+       ============================================================ */
+    const FORM_ENDPOINT = 'https://formsubmit.co/ajax/programmers@paymatesoftware.com';
+    const form = $('#contactForm');
+    const statusEl = $('#formStatus');
+    const submitBtn = $('#submitBtn');
+    const submitLabel = $('#submitLabel');
+
+    const fields = {
+      name: { el: $('#name'), error: $('#nameError'), validate: v => v.trim().length >= 2 ? '' : 'Please enter your name.' },
+      email: { el: $('#email'), error: $('#emailError'), validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? '' : 'Please enter a valid email address.' },
+      topic: { el: $('#topic'), error: $('#topicError'), validate: v => v ? '' : 'Please choose a topic.' },
+      message: { el: $('#message'), error: $('#messageError'), validate: v => v.trim().length >= 10 ? '' : 'Please write at least 10 characters.' },
+    };
+
+    function setFieldError(field, msg) {
+      field.error.textContent = msg;
+      field.el.closest('.field').classList.toggle('is-invalid', Boolean(msg));
+    }
+    function validateField(field) {
+      const msg = field.validate(field.el.value);
+      setFieldError(field, msg);
+      return !msg;
+    }
+    Object.values(fields).forEach(field => {
+      field.el.addEventListener('blur', () => validateField(field));
+      field.el.addEventListener('input', () => {
+        if (field.el.closest('.field').classList.contains('is-invalid')) validateField(field);
+      });
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const allValid = Object.values(fields).map(f => validateField(f)).every(Boolean);
+      if (!allValid) {
+        statusEl.className = 'fstatus err';
+        statusEl.textContent = 'Please fix the highlighted fields.';
+        if (!REDUCED) gsap.fromTo('#submitBtn', { x: 0 }, { keyframes: { x: [-7, 6, -4, 2, 0] }, duration: 0.5, ease: 'gh.out' });
+        return;
+      }
+      if ($('#gotcha').value) return; // honeypot — bots fill it, humans never see it
+
+      submitBtn.disabled = true;
+      pulseTl && pulseTl.pause();
+      submitLabel.textContent = 'Sending…';
+      statusEl.className = 'fstatus';
+      statusEl.textContent = '';
+
+      try {
+        const res = await fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            name: fields.name.el.value.trim(),
+            email: fields.email.el.value.trim(),
+            topic: fields.topic.el.value,
+            message: fields.message.el.value.trim(),
+            _subject: `Golden Horizon — ${fields.topic.el.value} inquiry from ${fields.name.el.value.trim()}`,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        statusEl.className = 'fstatus ok';
+        statusEl.textContent = 'Thanks! Your message is on its way — we’ll reply within two business days.';
+        form.reset();
+        beat.kick = 1.8; // the backstage dust shivers
+        if (!REDUCED) gsap.fromTo('#submitBtn', { scale: 0.94 }, { scale: 1, duration: 0.9, ease: 'gh.elastic' });
+      } catch {
+        statusEl.className = 'fstatus err';
+        statusEl.innerHTML = 'Something went wrong sending your message. Please email us directly at <a href="mailto:bookings@goldenhorizon.band">bookings@goldenhorizon.band</a>.';
+      } finally {
+        submitBtn.disabled = false;
+        submitLabel.textContent = 'Send Message';
+        pulseTl && pulseTl.play();
+      }
+    });
+
+    /* ============================================================
+       10. Listen Now — shockwave + toast
+       ============================================================ */
+    let toastTl = null;
+    function toast(msg) {
+      const el = $('#toast');
+      el.textContent = msg;
+      toastTl && toastTl.kill();
+      gsap.set(el, { y: 90, opacity: 0 });
+      toastTl = gsap.timeline()
+        .to(el, { y: 0, opacity: 1, duration: 0.7, ease: 'gh.elastic' })
+        .to(el, { y: 90, opacity: 0, duration: 0.5, ease: 'gh.in' }, 4.0);
+    }
+    $('#listenBtn').addEventListener('click', () => {
+      if (glOK && !REDUCED) {
+        spawnRipple(pointer.tx || 0, pointer.tz || 0, 1.9);
+        setTimeout(() => spawnRipple((Math.random() * 2 - 1) * 24, -6 - Math.random() * 24, 1.1), 130);
+        setTimeout(() => spawnRipple((Math.random() * 2 - 1) * 24, -6 - Math.random() * 24, 1.1), 260);
+        beat.kick = 1.7;
+      }
+      toast('Debut single “Golden Hour” drops July 2026 — stay tuned.');
+    });
+
+    function dismissHint() {
+      if (interacted) return;
+      interacted = true;
+      gsap.to('#hint', { autoAlpha: 0, y: 10, duration: 0.6, ease: 'gh.in' });
+    }
+
+    /* ============================================================
+       11. Cursor + magnetic elements
+       ============================================================ */
+    const curRing = $('#curRing'), curDot = $('#curDot');
+    const cur = { rx: -100, ry: -100, dx: -100, dy: -100, shown: false };
+    const INTERACTIVE = 'a, button, input, textarea, select, [data-magnetic]';
+
+    if (!COARSE && !REDUCED) {
+      document.addEventListener('mouseover', e => {
+        curRing.classList.toggle('on', Boolean(e.target.closest(INTERACTIVE)));
+      });
+      addEventListener('pointermove', () => {
+        if (cur.shown) return;
+        cur.shown = true;
+        cur.rx = cur.dx = pointer.sx; cur.ry = cur.dy = pointer.sy;
+        gsap.to([curRing, curDot], { opacity: 1, duration: 0.4, ease: 'gh.out' });
+      }, { passive: true });
+    }
+
+    function magnetize(el) {
+      if (COARSE || REDUCED) return;
+      const xTo = gsap.quickTo(el, 'x', { duration: 0.4, ease: 'gh.out' });
+      const yTo = gsap.quickTo(el, 'y', { duration: 0.4, ease: 'gh.out' });
+      el.addEventListener('pointermove', e => {
+        const r = el.getBoundingClientRect();
+        xTo((e.clientX - (r.left + r.width / 2)) * 0.24);
+        yTo((e.clientY - (r.top + r.height / 2)) * 0.3);
+      });
+      el.addEventListener('pointerleave', () => {
+        gsap.to(el, { x: 0, y: 0, duration: 0.8, ease: 'elastic.out(1.1, 0.34)', overwrite: 'auto' });
+      });
+    }
+    $$('[data-magnetic]').forEach(magnetize);
+
+    /* ============================================================
+       12. Waveform lines (contact ambience)
+       ============================================================ */
+    const wavepaths = [$('#wavepath1'), $('#wavepath2')];
+    const wavelineEl = $('#waveline');
+    function updateWaveline(time) {
+      const w = W(), steps = 60, mid = 64;
+      wavelineEl.setAttribute('viewBox', `0 0 ${w} 120`);
+      wavepaths.forEach((p, pi) => {
+        let d = '';
+        for (let i = 0; i <= steps; i++) {
+          const x = (w / steps) * i;
+          const y = mid
+            + Math.sin(x * 0.008 + time * 1.3 + pi * 1.7) * 11
+            + Math.sin(x * 0.021 - time * 2.1 + pi * 0.8) * 5;
+          d += (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1);
+        }
+        p.setAttribute('d', d);
+      });
+    }
+    updateWaveline(0);
+
+    /* ============================================================
+       13. Hero parallax — camera + content counter-drift
+       ============================================================ */
+    const par = { x: 0, y: 0 };
+    const heroXTo = gsap.quickTo('#heroInner', 'x', { duration: 0.9, ease: 'gh.out' });
+    const heroYTo = gsap.quickTo('#heroInner', 'y', { duration: 0.9, ease: 'gh.out' });
+
+    /* ============================================================
+       14. Main loop — one rAF drives everything
+       ============================================================ */
+    let rafId = null, last = performance.now(), simTime = 0;
+    let frames = 0, accum = 0, perfFrames = 0, perfTier = 0, slowStreak = 0;
+
+    // shed render resolution first, then halve particles
+    function degrade() {
+      perfTier++;
+      if (dprCap > 1) {
+        dprCap = Math.max(1, dprCap * 0.7);
+        renderer.setPixelRatio(dprCap);
+        uniforms.uPixelRatio.value = dprCap;
+        return;
+      }
+      const old = points.geometry;
+      points.geometry = buildGeometry(Math.max(4000, Math.round(old.attributes.position.count * 0.5)));
+      old.dispose();
+    }
+
+    function frame(now) {
+      rafId = requestAnimationFrame(frame);
+      const rawDt = (now - last) / 1000;
+      const dt = Math.min(rawDt, 0.05);
+      last = now;
+      simTime += dt * (REDUCED ? 0.45 : 1);
+      frames++;
+
+      updateBeat(simTime, dt);
+      updatePointer(dt);
+
+      if (glOK) {
+        uniforms.uTime.value = simTime;
+        uniforms.uKick.value = Math.min(beat.kick, 2);
+        uniforms.uBreath.value = 0.5 + 0.5 * Math.sin(simTime * 0.31);
+
+        if (!REDUCED && view === 'home') {
+          par.x += (pointer.nx * 2.3 - par.x) * Math.min(1, dt * 2.2);
+          par.y += (-pointer.ny * 1.1 - par.y) * Math.min(1, dt * 2.2);
+          heroXTo(-pointer.nx * 10);
+          heroYTo(-pointer.ny * 7);
+        }
+        camera.position.x = CAM.x + par.x;
+        // slight upward pitch keeps the membrane in the lower third, under dark sky
+        camera.lookAt(0, 16 + par.y * 1.5, -18);
+        renderer.render(scene, camera);
+      }
+
+      if (wipe.active) drawWipe(simTime);
+      if (view === 'contact' && !REDUCED && frames % 2 === 0) updateWaveline(simTime);
+
+      if (!COARSE && !REDUCED && cur.shown) {
+        cur.dx += (pointer.sx - cur.dx) * Math.min(1, dt * 26);
+        cur.dy += (pointer.sy - cur.dy) * Math.min(1, dt * 26);
+        cur.rx += (pointer.sx - cur.rx) * Math.min(1, dt * 11);
+        cur.ry += (pointer.sy - cur.ry) * Math.min(1, dt * 11);
+        curDot.style.transform = `translate(${cur.dx}px, ${cur.dy}px)`;
+        curRing.style.transform = `translate(${cur.rx}px, ${cur.ry}px)`;
+      }
+
+      // adaptive quality — reacts within a few frames when the GPU is drowning
+      if (glOK && perfTier < 4 && frames > 8) {
+        if (rawDt > 0.12) {
+          slowStreak++;
+          if (slowStreak >= 4) { degrade(); slowStreak = 0; }
+        } else {
+          slowStreak = 0;
+          accum += rawDt;
+          perfFrames++;
+          if (perfFrames >= 90) {
+            if (accum / perfFrames > 0.031) degrade();
+            accum = 0; perfFrames = 0;
+          }
+        }
+      }
+    }
+
+    function startLoop() {
+      if (rafId === null) { last = performance.now(); rafId = requestAnimationFrame(frame); }
+    }
+    function stopLoop() {
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+    document.addEventListener('visibilitychange', () => document.hidden ? stopLoop() : startLoop());
+
+    /* ============================================================
+       15. Resize + reduced-motion live updates
+       ============================================================ */
+    addEventListener('resize', () => {
+      if (glOK) {
+        renderer.setSize(W(), H());
+        camera.aspect = W() / H();
+        camera.updateProjectionMatrix();
+      }
+      sizeWipe();
+      updateWaveline(simTime);
+    });
+
+    rmQuery.addEventListener?.('change', e => {
+      REDUCED = e.matches;
+      if (glOK) gsap.to(uniforms.uReduced, { value: REDUCED ? 1 : 0, duration: 0.6, ease: 'gh.out' });
+      if (REDUCED) {
+        pulseTl && pulseTl.kill(); pulseTl = null;
+        beamTweens.forEach(t => t.kill()); beamTweens = [];
+      }
+    });
+
+    /* ============================================================
+       16. Loader — the curtain parts
+       ============================================================ */
+    primeHidden();
+    startLoop();
+
+    const fontsReady = document.fonts && document.fonts.ready
+      ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1600))])
+      : Promise.resolve();
+    const minTime = new Promise(r => setTimeout(r, 1000));
+
+    const counter = { v: 0 };
+    const lcount = $('#lcount');
+    gsap.to(counter, {
+      v: 100, duration: 1.15, ease: 'gh.inertia',
+      onUpdate: () => { lcount.textContent = String(Math.round(counter.v)).padStart(2, '0'); },
+    });
+    gsap.fromTo('#lseam', { scaleY: 0 }, { scaleY: 1, duration: 1.1, ease: 'gh.out' });
+
+    Promise.all([fontsReady, minTime]).then(() => {
+      if (REDUCED) {
+        gsap.to('#loader', {
+          autoAlpha: 0, duration: 0.5, ease: 'none',
+          onComplete() { $('#loader').style.display = 'none'; },
+        });
+        playReveal(view, true);
+        return;
+      }
+      gsap.timeline({
+        onComplete() { $('#loader').style.display = 'none'; },
+      })
+        .to('#lcenter', { autoAlpha: 0, duration: 0.4, ease: 'gh.in' })
+        .to('#lseam', { boxShadow: '0 0 60px rgba(245,168,60,1)', duration: 0.22, ease: 'gh.in' }, 0.1)
+        .add(() => playReveal(view, true), 0.62)
+        .to('#lseam', { autoAlpha: 0, duration: 0.3, ease: 'gh.in' }, 0.55)
+        .to('.lp-l', { xPercent: -101, duration: 1.05, ease: 'gh.swift' }, 0.58)
+        .to('.lp-r', { xPercent: 101, duration: 1.05, ease: 'gh.swift' }, 0.64);
+    });
+  </script>
 </body>
 </html>

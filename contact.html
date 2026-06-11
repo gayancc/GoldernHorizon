@@ -4,109 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Contact — Golden Horizon</title>
-  <meta name="description" content="Book Golden Horizon for your venue or festival, or get in touch for press and collaborations." />
-  <meta name="theme-color" content="#0b0a08" />
+  <!-- The site is a single-file experience; the contact page lives at /#contact.
+       This stub keeps the old /contact.html URL working. -->
+  <meta http-equiv="refresh" content="0; url=/#contact" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#050507" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/src/css/style.css" />
-  <script>document.documentElement.classList.add('js');</script>
+  <script>location.replace('/#contact');</script>
+  <style>
+    body { background: #050507; color: rgba(244, 239, 230, 0.7); font-family: system-ui, sans-serif;
+      display: grid; place-items: center; min-height: 100vh; margin: 0; }
+    a { color: #f5a83c; }
+  </style>
 </head>
-<body class="page-contact">
-  <div class="grain" aria-hidden="true"></div>
-
-  <header class="nav nav--solid" id="nav">
-    <a href="/" class="nav__logo" aria-label="Golden Horizon home">
-      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
-        <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <line x1="2" y1="22" x2="30" y2="22" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-      <span>Golden&nbsp;Horizon</span>
-    </a>
-    <nav class="nav__links" id="navLinks" aria-label="Primary">
-      <a href="/" class="nav__link">Home</a>
-      <a href="/contact.html" class="nav__link nav__link--cta" aria-current="page">Book Us</a>
-    </nav>
-    <button class="nav__toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
-      <span></span><span></span>
-    </button>
-  </header>
-
-  <main id="main">
-    <section class="contact section">
-      <div class="section__inner contact__grid">
-        <div class="contact__intro">
-          <p class="section__eyebrow" data-reveal>Get In Touch</p>
-          <h1 class="contact__title" data-reveal>Let’s make<br /><em>something</em><br />golden.</h1>
-          <p class="contact__lead" data-reveal>Bookings, press, sync licensing or just to say hi — drop us a line and our manager will get back to you within two business days.</p>
-          <ul class="contact__details" data-reveal>
-            <li>
-              <span class="contact__label">Bookings & Management</span>
-              <a href="mailto:bookings@goldenhorizon.band">bookings@goldenhorizon.band</a>
-            </li>
-            <li>
-              <span class="contact__label">Press</span>
-              <a href="mailto:press@goldenhorizon.band">press@goldenhorizon.band</a>
-            </li>
-            <li>
-              <span class="contact__label">Based in</span>
-              <span>Toronto, Ontario, Canada</span>
-            </li>
-          </ul>
-        </div>
-
-        <form class="form" id="contactForm" novalidate data-reveal>
-          <div class="form__row">
-            <div class="form__field">
-              <label for="name">Name <span aria-hidden="true">*</span></label>
-              <input type="text" id="name" name="name" autocomplete="name" required maxlength="100" placeholder="Your name" />
-              <p class="form__error" id="nameError" role="alert"></p>
-            </div>
-            <div class="form__field">
-              <label for="email">Email <span aria-hidden="true">*</span></label>
-              <input type="email" id="email" name="email" autocomplete="email" required maxlength="200" placeholder="you@example.com" />
-              <p class="form__error" id="emailError" role="alert"></p>
-            </div>
-          </div>
-          <div class="form__field">
-            <label for="topic">I’m reaching out about <span aria-hidden="true">*</span></label>
-            <select id="topic" name="topic" required>
-              <option value="" selected disabled>Choose a topic…</option>
-              <option value="booking">Booking the band</option>
-              <option value="press">Press / media</option>
-              <option value="sync">Sync licensing</option>
-              <option value="other">Something else</option>
-            </select>
-            <p class="form__error" id="topicError" role="alert"></p>
-          </div>
-          <div class="form__field">
-            <label for="message">Message <span aria-hidden="true">*</span></label>
-            <textarea id="message" name="message" rows="6" required maxlength="3000" placeholder="Tell us about your event, venue, dates, or anything else…"></textarea>
-            <p class="form__error" id="messageError" role="alert"></p>
-          </div>
-          <!-- Honeypot anti-spam field, hidden from humans -->
-          <input type="text" name="_gotcha" id="gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="form__honeypot" />
-          <button type="submit" class="btn btn--solid btn--big form__submit" id="submitBtn">
-            <span class="form__submit-label">Send Message</span>
-          </button>
-          <p class="form__status" id="formStatus" role="status" aria-live="polite"></p>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="footer__inner">
-      <p class="footer__logo">Golden Horizon</p>
-      <p class="footer__meta">Toronto, Canada — © 2026 Golden Horizon. All rights reserved.</p>
-      <nav class="footer__links" aria-label="Footer">
-        <a href="/">Home</a>
-        <a href="/contact.html">Contact</a>
-      </nav>
-    </div>
-  </footer>
-
-  <script type="module" src="/src/js/contact.js"></script>
+<body>
+  <p>Redirecting to the <a href="/#contact">contact page</a>…</p>
 </body>
 </html>
