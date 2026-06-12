@@ -12,7 +12,7 @@
         "source": "/api/contact",
         "function": {
           "functionId": "contact",
-          "region": "northamerica-northeast1"
+          "region": "us-central1"
         }
       }
     ],

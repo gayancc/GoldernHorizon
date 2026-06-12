@@ -3,7 +3,7 @@
 const crypto = require("node:crypto");
 const nodemailer = require("nodemailer");
 const logger = require("firebase-functions/logger");
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest } = require("firebase-functions/v1/https");
 const config = require("./mail.config");
 const {
   allowedTopics,
@@ -58,12 +58,7 @@ function getTransporter() {
   return transporter;
 }
 
-exports.contact = onRequest({
-  region: "northamerica-northeast1",
-  memory: "256MiB",
-  timeoutSeconds: 30,
-  maxInstances: 3,
-}, async (request, response) => {
+exports.contact = onRequest(async (request, response) => {
   response.set("Cache-Control", "no-store");
 
   if (request.method !== "POST") {

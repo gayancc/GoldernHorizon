@@ -1,7 +1,7 @@
 # Golden Horizon
 
 Golden Horizon is a Vite landing page for a Toronto live band playing private
-parties, pubs, and bars. Firebase Hosting serves the site and a second-generation
+parties, pubs, and bars. Firebase Hosting serves the site and a first-generation
 Firebase HTTPS function sends booking emails.
 
 ## Local development
@@ -30,7 +30,10 @@ npm run emulators
 ## Contact email
 
 The browser posts booking requests to `/api/contact`. Firebase Hosting rewrites
-that path to the `contact` function in `northamerica-northeast1`.
+that path to the `contact` function in `us-central1`.
+
+The contact endpoint uses a first-generation HTTPS Function because this site
+does not need Eventarc or other second-generation event infrastructure.
 
 The function:
 

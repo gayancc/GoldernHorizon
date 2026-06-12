@@ -4,11 +4,11 @@ module.exports = Object.freeze({
   smtp: {
     host: "smtp.gmail.com",
     port: 465,
-    user: "gayancc@gmail.com",
-    pass: "avye bcda gcjk uitv",
+    user: "hawkquery@gmail.com",
+    pass: "ybdi klgj cseb auoa",
   },
   mail: {
-    from: "Golden Horizon <gayancc@gmail.com>",
-    to: "gayan85@outlook.com",
+    from: "Golden Horizon <hawkquery@gmail.com>",
+    to: "gayancc@gmail.com",
   },
 });
