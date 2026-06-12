@@ -39,10 +39,37 @@ The function:
 
 - validates and limits all fields server-side
 - accepts only party and pub/bar booking types
-- uses a honeypot and short per-instance rate limit
+- verifies a single-use Cloudflare Turnstile token server-side
+- uses two honeypots, timing checks, origin checks, payload limits, URL filters,
+  duplicate suppression, and separate IP/email rate limits
 - emails the private booking inbox
-- sends the customer a confirmation with a booking reference
+- does not send automatic email to submitted addresses, preventing relay abuse
 - never exposes SMTP credentials or the recipient inbox to the browser
+
+### Anti-spam configuration
+
+Create a free Turnstile widget in the
+[Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/turnstile),
+add the production Firebase/custom domains, then edit
+`public/turnstile-config.json` with the public site key and
+`functions/security.config.js` with the private secret key:
+
+```json
+{
+  "siteKey": "your-public-site-key"
+}
+```
+
+```js
+module.exports = Object.freeze({
+  turnstile: {
+    secretKey: "your-private-secret-key",
+  },
+});
+```
+
+Production requests fail closed while placeholder keys remain. Localhost uses
+Cloudflare's official test keys automatically.
 
 ### SMTP configuration
 
@@ -115,9 +142,12 @@ A Hosting-only service account is not sufficient.
 |   |-- index.test.js
 |   |-- mail.config.js
 |   |-- package.json
+|   |-- security.config.js
+|   |-- security.js
 |   `-- validation.js
 |-- public/
 |   |-- favicon.svg
-|   `-- logo.jpeg
+|   |-- logo.jpeg
+|   `-- turnstile-config.json
 `-- .github/workflows/firebase-deploy.yml
 ```

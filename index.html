@@ -21,7 +21,6 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
       "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.13.0/index.js"
     }
   }
@@ -30,7 +29,7 @@
   <style>
     /* ============================================================
        GOLDEN HORIZON — single-file site
-       Layers (z): gl 0 · glow 1 · views 2 · nav 40 · wipe 60 ·
+       Layers (z): flakes 0 · glow 1 · views 2 · nav 40 · wipe 60 ·
                    vignette 65 · grain 70 · cursor 90 · loader 100
        ============================================================ */
     :root {
@@ -76,16 +75,17 @@
     }
     .skip-link:focus { transform: translateY(0); }
 
-    /* WebGL fallback when context is unavailable */
-    body.no-gl #gl { display: none; }
-    body.no-gl {
-      background:
-        radial-gradient(120% 70% at 50% 36%, rgba(245, 150, 50, 0.14), transparent 60%),
-        linear-gradient(180deg, #050507 0%, #0a0705 58%, #050507 100%);
-    }
-
     /* ---------- fixed scene layers ---------- */
-    #gl { position: fixed; inset: 0; z-index: 0; display: block; width: 100%; height: 100%; }
+    #particles-js {
+      position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%;
+      pointer-events: none; opacity: 0.82;
+      transition: opacity 0.8s var(--ease-css);
+      background:
+        radial-gradient(90% 58% at 50% 46%, rgba(245, 150, 50, 0.055), transparent 68%),
+        linear-gradient(180deg, #050507 0%, #090705 58%, #050507 100%);
+    }
+    #particles-js.is-muted { opacity: 0; }
+    #particles-js .particles-js-canvas-el { display: block; width: 100%; height: 100%; }
 
     .glow { position: fixed; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: screen; }
     .glow::before {
@@ -403,6 +403,12 @@
     .ferr { min-height: 1.05em; margin-top: 7px; font-size: 0.72rem; color: var(--err); letter-spacing: 0.02em; }
 
     .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .turnstile-widget {
+      min-height: 2px;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 10px;
+    }
 
     .btn-submit { margin-top: 8px; min-width: 230px; transform-origin: 50% 50%; }
     .kick-ring { position: absolute; inset: -1px; border-radius: inherit; z-index: 0;
@@ -512,6 +518,7 @@
     /* ---------- reduced motion ---------- */
     @media (prefers-reduced-motion: reduce) {
       .grain { animation: none; }
+      #particles-js .particles-js-canvas-el { display: none; }
       .hint-dot { animation: none; }
       .btn-sheen { display: none; }
       .field input:focus, .field textarea:focus, .field select:focus { animation: none; }
@@ -534,7 +541,7 @@
 
 <body>
   <a class="skip-link" id="skipLink" href="#main">Skip to main content</a>
-  <canvas id="gl" aria-hidden="true"></canvas>
+  <div id="particles-js" aria-hidden="true"></div>
   <div class="glow" aria-hidden="true"></div>
 
   <header class="nav" id="nav">
@@ -580,7 +587,7 @@
           </button>
         </div>
       </div>
-      <p class="hint" id="hint" aria-hidden="true"><span class="hint-dot"></span><span id="hintText">Move your cursor — the stage responds</span></p>
+      <p class="hint" id="hint" aria-hidden="true"><span class="hint-dot"></span><span id="hintText">Move your cursor — the gold parts</span></p>
       <p class="corner corner-l" aria-hidden="true">Toronto · 43.65° N</p>
       <p class="corner corner-r" aria-hidden="true">Est. 2019</p>
     </section>
@@ -645,6 +652,8 @@
           </div>
           <!-- Honeypot anti-spam field, hidden from humans -->
           <input type="text" name="_gotcha" id="gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp" />
+          <input type="text" name="company" id="company" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp" />
+          <div id="turnstileWidget" class="turnstile-widget" aria-label="Anti-spam verification"></div>
           <button type="submit" class="btn btn-solid btn-submit" id="submitBtn" data-magnetic>
             <span class="btn-label" id="submitLabel">Send Message</span>
             <span class="kick-ring" aria-hidden="true"></span>
@@ -677,8 +686,8 @@
     </div>
   </div>
 
+  <script src="/vendor/particles.min.js"></script>
   <script type="module">
-    import * as THREE from 'three';
     import { gsap } from 'gsap';
 
     /* ============================================================
@@ -706,7 +715,92 @@
     });
 
     /* ============================================================
-       1. Text splitting (chars for hero, words for contact)
+       1. Golden flakes — sparse particles.js snowfall
+       ============================================================ */
+    const flakeLayer = $('#particles-js');
+    let flakesReady = false;
+
+    function initGoldenFlakes() {
+      if (flakesReady || REDUCED || !window.particlesJS) return;
+      window.particlesJS('particles-js', {
+        particles: {
+          number: {
+            value: COARSE ? 38 : 64,
+            density: { enable: true, value_area: 1200 },
+          },
+          color: { value: ['#ffdca0', '#f5a83c', '#c98228'] },
+          shape: {
+            type: ['circle', 'polygon'],
+            stroke: { width: 0, color: '#000000' },
+            polygon: { nb_sides: 5 },
+          },
+          opacity: {
+            value: 0.46,
+            random: true,
+            anim: {
+              enable: true,
+              speed: 0.16,
+              opacity_min: 0.12,
+              sync: false,
+            },
+          },
+          size: {
+            value: COARSE ? 2.1 : 2.5,
+            random: true,
+            anim: {
+              enable: true,
+              speed: 0.45,
+              size_min: 0.7,
+              sync: false,
+            },
+          },
+          line_linked: { enable: false },
+          move: {
+            enable: true,
+            speed: COARSE ? 0.34 : 0.46,
+            direction: 'bottom',
+            random: true,
+            straight: false,
+            out_mode: 'out',
+            bounce: false,
+            attract: { enable: false, rotateX: 1200, rotateY: 1200 },
+          },
+        },
+        interactivity: {
+          detect_on: 'window',
+          events: {
+            onhover: { enable: !COARSE, mode: 'repulse' },
+            onclick: { enable: false, mode: 'push' },
+            resize: true,
+          },
+          modes: {
+            repulse: { distance: 74, duration: 0.34 },
+            push: { particles_nb: 0 },
+          },
+        },
+        retina_detect: true,
+      });
+      const instance = window.pJSDom?.[window.pJSDom.length - 1]?.pJS;
+      const particleCount = instance?.particles?.array?.length || 0;
+      flakeLayer.dataset.particleCount = String(particleCount);
+      flakesReady = particleCount > 0;
+    }
+
+    function setFlakesPaused(paused) {
+      const instance = window.pJSDom?.[0]?.pJS;
+      if (!instance) return;
+      if (paused) {
+        cancelAnimationFrame(instance.fn.drawAnimFrame);
+        instance.fn.drawAnimFrame = null;
+      } else if (!instance.fn.drawAnimFrame && !REDUCED) {
+        instance.fn.vendors.draw();
+      }
+    }
+
+    initGoldenFlakes();
+
+    /* ============================================================
+       2. Text splitting (chars for hero, words for contact)
        ============================================================ */
     function splitWords(el) {
       const nodes = [...el.childNodes];
@@ -731,7 +825,7 @@
     const heroChars1 = $$('#t1 .ch');
     const heroChars2 = $$('#t2 .ch');
     const contactWords = splitWords($('#cTitle'));
-    if (COARSE) $('#hintText').textContent = 'Touch the stage — it responds';
+    if (COARSE) $('#hintText').textContent = 'A little gold in the air';
 
     /* ============================================================
        2. WebGL — the living sound membrane
@@ -998,7 +1092,7 @@
       });
       glOK = true;
     }
-    initGL();
+    // particles.js replaces the previous WebGL particle renderer.
 
     /* ============================================================
        3. Rhythm engine — the membrane plays itself
@@ -1027,19 +1121,9 @@
       sx: -100, sy: -100,                        // raw screen px for the cursor
     };
     let interacted = false;
-    const raycaster = new THREE.Raycaster();
-    const ndcV = new THREE.Vector2();
-
     function pointerToPlane(cx, cy) {
-      if (!glOK) return;
-      ndcV.set((cx / W()) * 2 - 1, -(cy / H()) * 2 + 1);
-      raycaster.setFromCamera(ndcV, camera);
-      const o = raycaster.ray.origin, dir = raycaster.ray.direction;
-      if (Math.abs(dir.y) < 1e-4) return;
-      const t = -o.y / dir.y;
-      if (t <= 0) return;
-      pointer.tx = o.x + dir.x * t;
-      pointer.tz = o.z + dir.z * t;
+      pointer.tx = (cx / W() - 0.5) * 80;
+      pointer.tz = -10 - (cy / H()) * 50;
     }
 
     function spawnRipple(x, z, strength) {
@@ -1172,6 +1256,8 @@
 
     function applyViewDOM(name) {
       const off = name === 'home' ? 'contact' : 'home';
+      flakeLayer.classList.toggle('is-muted', name !== 'home');
+      flakeLayer.style.opacity = name === 'home' ? '0.82' : '0';
       viewEls[off].hidden = true;
       viewEls[off].inert = true;
       viewEls[name].hidden = false;
@@ -1368,6 +1454,53 @@
     const statusEl = $('#formStatus');
     const submitBtn = $('#submitBtn');
     const submitLabel = $('#submitLabel');
+    const formStartedAt = Date.now();
+    let turnstileToken = '';
+    let turnstileWidgetId = null;
+    const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
+
+    function loadTurnstileScript() {
+      return new Promise((resolve, reject) => {
+        if (window.turnstile) return resolve();
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Could not load anti-spam protection.'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function initializeTurnstile() {
+      try {
+        const local = ['localhost', '127.0.0.1'].includes(location.hostname);
+        const configResponse = await fetch('/turnstile-config.json', {
+          headers: { Accept: 'application/json' },
+        });
+        const protection = await configResponse.json().catch(() => ({}));
+        const siteKey = local ? TURNSTILE_TEST_SITE_KEY : protection.siteKey;
+        if (!configResponse.ok || !siteKey || siteKey.startsWith('replace-with-')) {
+          throw new Error(protection.error || 'Booking protection is unavailable.');
+        }
+        await loadTurnstileScript();
+        turnstileWidgetId = window.turnstile.render('#turnstileWidget', {
+          sitekey: siteKey,
+          theme: 'dark',
+          size: 'flexible',
+          action: 'contact',
+          appearance: 'interaction-only',
+          callback: token => { turnstileToken = token; },
+          'expired-callback': () => { turnstileToken = ''; },
+          'error-callback': () => { turnstileToken = ''; },
+        });
+      } catch (error) {
+        submitBtn.disabled = true;
+        statusEl.className = 'fstatus err';
+        statusEl.textContent = error.message;
+      }
+    }
+    initializeTurnstile();
 
     const fields = {
       name: { el: $('#name'), error: $('#nameError'), validate: v => v.trim().length >= 2 ? '' : 'Please enter your name.' },
@@ -1402,6 +1535,11 @@
         return;
       }
       if ($('#gotcha').value) return; // honeypot — bots fill it, humans never see it
+      if (!turnstileToken) {
+        statusEl.className = 'fstatus err';
+        statusEl.textContent = 'Please complete the anti-spam check.';
+        return;
+      }
 
       submitBtn.disabled = true;
       pulseTl && pulseTl.pause();
@@ -1412,13 +1550,20 @@
       try {
         const res = await fetch(FORM_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-GH-Form': 'booking',
+          },
           body: JSON.stringify({
             name: fields.name.el.value.trim(),
             email: fields.email.el.value.trim(),
             topic: fields.topic.el.value,
             message: fields.message.el.value.trim(),
             website: $('#gotcha').value,
+            company: $('#company').value,
+            startedAt: formStartedAt,
+            turnstileToken,
           }),
         });
         const payload = await res.json().catch(() => ({}));
@@ -1428,9 +1573,13 @@
           ? `Thanks! Your booking request is on its way. Reference: ${payload.reference}.`
           : 'Thanks! Your booking request is on its way.';
         form.reset();
+        turnstileToken = '';
+        if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         beat.kick = 1.8; // the backstage dust shivers
         if (!REDUCED) gsap.fromTo('#submitBtn', { scale: 0.94 }, { scale: 1, duration: 0.9, ease: 'gh.elastic' });
       } catch (error) {
+        turnstileToken = '';
+        if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         statusEl.className = 'fstatus err';
         statusEl.textContent = error.message || 'Something went wrong sending your message. Please try again.';
       } finally {
@@ -1592,7 +1741,15 @@
     function stopLoop() {
       if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
     }
-    document.addEventListener('visibilitychange', () => document.hidden ? stopLoop() : startLoop());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopLoop();
+        setFlakesPaused(true);
+      } else {
+        startLoop();
+        setFlakesPaused(false);
+      }
+    });
 
     /* ============================================================
        15. Resize + reduced-motion live updates
@@ -1620,8 +1777,12 @@
       REDUCED = e.matches;
       if (glOK) gsap.to(uniforms.uReduced, { value: REDUCED ? 1 : 0, duration: 0.6, ease: 'gh.out' });
       if (REDUCED) {
+        setFlakesPaused(true);
         pulseTl && pulseTl.kill(); pulseTl = null;
         beamTweens.forEach(t => t.kill()); beamTweens = [];
+      } else {
+        initGoldenFlakes();
+        setFlakesPaused(false);
       }
     });
 

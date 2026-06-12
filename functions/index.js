@@ -5,6 +5,13 @@ const nodemailer = require("nodemailer");
 const logger = require("firebase-functions/logger");
 const { onRequest } = require("firebase-functions/v1/https");
 const config = require("./mail.config");
+const securityConfig = require("./security.config");
+const {
+  getTurnstileSecret,
+  hasAllowedOrigin,
+  submissionFingerprint,
+  verifyTurnstile,
+} = require("./security");
 const {
   allowedTopics,
   escapeHtml,
@@ -12,22 +19,27 @@ const {
 } = require("./validation");
 
 const requestLog = new Map();
+const emailLog = new Map();
+const duplicateLog = new Map();
 let transporter;
 
-function isRateLimited(ip, now = Date.now()) {
-  const windowMs = 10 * 60 * 1000;
-  const limit = 5;
-  const recent = (requestLog.get(ip) || []).filter((timestamp) => now - timestamp < windowMs);
+function exceedsLimit(log, key, limit, windowMs, now = Date.now()) {
+  const recent = (log.get(key) || []).filter((timestamp) => now - timestamp < windowMs);
   recent.push(now);
-  requestLog.set(ip, recent);
+  log.set(key, recent);
 
-  if (requestLog.size > 500) {
-    for (const [key, timestamps] of requestLog) {
-      if (!timestamps.some((timestamp) => now - timestamp < windowMs)) requestLog.delete(key);
+  if (log.size > 500) {
+    for (const [storedKey, timestamps] of log) {
+      if (!timestamps.some((timestamp) => now - timestamp < windowMs)) log.delete(storedKey);
     }
   }
 
   return recent.length > limit;
+}
+
+function isDuplicate(fingerprint, now = Date.now()) {
+  const previous = duplicateLog.get(fingerprint);
+  return Boolean(previous && now - previous < 12 * 60 * 60 * 1000);
 }
 
 function getTransporter() {
@@ -59,10 +71,25 @@ function getTransporter() {
 }
 
 exports.contact = onRequest(async (request, response) => {
-  response.set("Cache-Control", "no-store");
+  response.set({
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+  });
 
   if (request.method !== "POST") {
     response.set("Allow", "POST").status(405).json({ error: "Method not allowed." });
+    return;
+  }
+
+  if (!hasAllowedOrigin(request) || request.get("x-gh-form") !== "booking") {
+    response.status(403).json({ error: "Request rejected." });
+    return;
+  }
+  const fetchSite = request.get("sec-fetch-site");
+  if (fetchSite && fetchSite !== "same-origin") {
+    response.status(403).json({ error: "Request rejected." });
     return;
   }
 
@@ -71,9 +98,13 @@ exports.contact = onRequest(async (request, response) => {
     response.status(415).json({ error: "Expected a JSON request." });
     return;
   }
+  if ((request.rawBody?.length || 0) > 12000) {
+    response.status(413).json({ error: "Request is too large." });
+    return;
+  }
 
   const ip = request.ip || request.get("x-forwarded-for") || "unknown";
-  if (isRateLimited(ip)) {
+  if (exceedsLimit(requestLog, ip, 6, 15 * 60 * 1000)) {
     response.status(429).json({ error: "Too many requests. Please try again shortly." });
     return;
   }
@@ -88,12 +119,40 @@ exports.contact = onRequest(async (request, response) => {
     return;
   }
 
-  const { name, email, topic, message } = submission;
+  const { name, email, topic, message, startedAt, turnstileToken } = submission;
+  const formAge = Date.now() - startedAt;
+  if (formAge < 3000 || formAge > 2 * 60 * 60 * 1000) {
+    response.status(400).json({ error: "Please refresh the page and try again." });
+    return;
+  }
+  const fingerprint = submissionFingerprint(submission);
   const topicLabel = allowedTopics.get(topic);
   const reference = crypto.randomUUID().slice(0, 8).toUpperCase();
   const escapedName = escapeHtml(name);
   const escapedEmail = escapeHtml(email);
   const escapedMessage = escapeHtml(message).replace(/\n/g, "<br>");
+
+  let human = false;
+  try {
+    const secretKey = getTurnstileSecret(request, securityConfig);
+    human = await verifyTurnstile({ token: turnstileToken, ip, secretKey });
+  } catch (error) {
+    logger.error("Anti-spam verification unavailable.", { error: error.message });
+    response.status(503).json({ error: "Anti-spam verification is unavailable. Please try again." });
+    return;
+  }
+  if (!human) {
+    response.status(403).json({ error: "Anti-spam verification failed. Please try again." });
+    return;
+  }
+  if (exceedsLimit(emailLog, email, 2, 6 * 60 * 60 * 1000)) {
+    response.status(429).json({ error: "Too many requests for this email address." });
+    return;
+  }
+  if (isDuplicate(fingerprint)) {
+    response.status(200).json({ ok: true });
+    return;
+  }
 
   try {
     const transport = getTransporter();
@@ -122,37 +181,7 @@ exports.contact = onRequest(async (request, response) => {
       `,
     });
 
-    try {
-      await transport.sendMail({
-        from,
-        to: email,
-        replyTo: recipient,
-        subject: `We received your Golden Horizon booking inquiry [${reference}]`,
-        text: [
-          `Hi ${name},`,
-          "",
-          `Thanks for contacting Golden Horizon about your ${topicLabel.toLowerCase()}.`,
-          "We received your message and will reply within two business days.",
-          "",
-          `Booking reference: ${reference}`,
-          "",
-          "Golden Horizon",
-        ].join("\n"),
-        html: `
-          <p>Hi ${escapedName},</p>
-          <p>Thanks for contacting Golden Horizon about your ${topicLabel.toLowerCase()}.</p>
-          <p>We received your message and will reply within two business days.</p>
-          <p><strong>Booking reference:</strong> ${reference}</p>
-          <p>Golden Horizon</p>
-        `,
-      });
-    } catch (acknowledgementError) {
-      logger.warn("Booking received, but acknowledgement email failed.", {
-        reference,
-        error: acknowledgementError.message,
-      });
-    }
-
+    duplicateLog.set(fingerprint, Date.now());
     response.status(200).json({ ok: true, reference });
   } catch (error) {
     logger.error("Contact email failed.", { reference, error: error.message });
