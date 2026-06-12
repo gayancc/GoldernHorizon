@@ -1,8 +1,21 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/api/contact",
+        "function": {
+          "functionId": "contact",
+          "region": "northamerica-northeast1"
+        }
+      }
+    ],
     "headers": [
       {
         "source": "**/*.@(js|css|svg|woff2)",
@@ -17,5 +30,16 @@
         ]
       }
     ]
+  },
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true
+    }
   }
 }

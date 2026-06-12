@@ -1,81 +1,120 @@
-# Golden Horizon — Band Landing Page
+# Golden Horizon
 
-A modern, animated landing page for **Golden Horizon**, a fictional Toronto-based
-musical group. Built with [Vite](https://vitejs.dev),
-[GSAP](https://gsap.com) (ScrollTrigger animations) and
-[Three.js](https://threejs.org) (animated golden-horizon hero scene), deployed to
-Firebase Hosting via GitHub Actions.
-
-## Features
-
-- **Three.js hero** — a golden sun sinking toward a wireframe ocean of animated
-  waves with drifting dust particles and pointer parallax
-- **GSAP animations** — preloader-to-hero title intro and scroll-triggered
-  reveals on the contact page
-- **Fully functional contact page** — client-side validation, honeypot
-  anti-spam, AJAX submission (no backend needed on static hosting)
-- **Mobile-friendly** — responsive grid layouts, full-screen mobile menu,
-  `svh` viewport units, capped pixel ratio on the WebGL canvas
-- **Accessible & resilient** — `prefers-reduced-motion` support, semantic
-  markup, ARIA labels, content remains visible if JavaScript fails
+Golden Horizon is a Vite landing page for a Toronto live band playing private
+parties, pubs, and bars. Firebase Hosting serves the site and a second-generation
+Firebase HTTPS function sends booking emails.
 
 ## Local development
 
+Install website and function dependencies:
+
 ```bash
-npm install
-npm run dev        # dev server at http://localhost:5173
-npm run build      # production build → dist/
-npm run preview    # preview the production build
+npm ci
+npm ci --prefix functions
 ```
 
-## Contact form
+Run the website:
 
-The form posts to [FormSubmit](https://formsubmit.co) (free, no backend
-required). The recipient inbox is set by `FORM_ENDPOINT` in
-`src/js/contact.js`:
+```bash
+npm run dev
+```
+
+The Vite server proxies `/api/contact` to the local Firebase Functions emulator
+on port `5001`. Complete `functions/mail.config.js`, then start the emulator in
+another terminal to test email:
+
+```bash
+npm run emulators
+```
+
+## Contact email
+
+The browser posts booking requests to `/api/contact`. Firebase Hosting rewrites
+that path to the `contact` function in `northamerica-northeast1`.
+
+The function:
+
+- validates and limits all fields server-side
+- accepts only party and pub/bar booking types
+- uses a honeypot and short per-instance rate limit
+- emails the private booking inbox
+- sends the customer a confirmation with a booking reference
+- never exposes SMTP credentials or the recipient inbox to the browser
+
+### SMTP configuration
+
+The function supports any authenticated SMTP provider. For Gmail or Google
+Workspace, enable two-step verification and create an App Password. Do not use
+the normal account password.
+
+Edit `functions/mail.config.js`:
 
 ```js
-const FORM_ENDPOINT = 'https://formsubmit.co/ajax/<your-email>';
+module.exports = {
+  smtp: {
+    host: "smtp.gmail.com",
+    port: 465,
+    user: "your-account@gmail.com",
+    pass: "your-16-character-app-password",
+  },
+  mail: {
+    from: "Golden Horizon <your-account@gmail.com>",
+    to: "the-inbox-that-should-receive-bookings@example.com",
+  },
+};
 ```
 
-The **first** submission triggers a one-time activation email from FormSubmit
-to that address — click the link in it and all subsequent submissions are
-delivered straight to the inbox.
+The `from` address must use the authenticated SMTP account or a sender alias
+verified with that provider.
 
-## Deployment (Firebase Hosting via GitHub Actions)
+The configuration is committed to the repository and deployed with the
+function. Anyone who can read the repository can read the SMTP password. Cloud
+Functions still requires the Firebase project to use the Blaze billing plan.
 
-`.github/workflows/firebase-deploy.yml` builds the site and:
+## Verification
 
-- deploys to the **live** channel on every push to `main` (and manual runs)
-- deploys to a **preview channel** for every pull request (URL is posted as a
-  PR comment)
+```bash
+npm run build
+npm run test:functions
+npm audit
+npm audit --prefix functions
+```
 
-### One-time setup
+## GitHub deployment
 
-1. Create a Firebase project and enable Hosting
-   (`firebase init hosting` locally, or via the console).
-2. Update the project id in `.firebaserc`.
-3. Create a service account for deploys:
-   `firebase init hosting:github` does this automatically, or create one in
-   Google Cloud IAM with the *Firebase Hosting Admin* role and download the
-   JSON key.
-4. Add two GitHub repository secrets:
-   - `FIREBASE_SERVICE_ACCOUNT` — contents of the service-account JSON key
-   - `FIREBASE_PROJECT_ID` — your Firebase project id
+`.github/workflows/firebase-deploy.yml`:
+
+- builds the Vite site
+- installs and tests the contact function
+- deploys Hosting and Functions on pushes to `main`
+- deploys a Hosting preview channel for pull requests
+
+Add these GitHub repository secrets:
+
+- `FIREBASE_PROJECT_ID`: `golden-horizon-band`
+- `FIREBASE_SERVICE_ACCOUNT`: the complete Firebase deployment service-account
+  JSON document
+
+The deployment service account needs Firebase Hosting Admin and Cloud Functions
+Developer. Grant it Service Account User on the Functions runtime and Cloud
+Build service accounts; Hosting deployments may also require API Keys Viewer.
+A Hosting-only service account is not sufficient.
 
 ## Project structure
 
-```
-├── index.html                  # landing page
-├── contact.html                # contact / booking page
-├── public/favicon.svg
-├── src/
-│   ├── css/style.css           # design system + responsive styles
-│   └── js/
-│       ├── main.js             # landing page entry (GSAP timelines)
-│       ├── contact.js          # contact page entry (form logic)
-│       ├── scene.js            # Three.js hero scene
-│       └── ui.js               # shared nav + scroll reveals
-├── firebase.json               # hosting config (dist/, cache headers)
-└── .github/workflows/firebase-deploy.yml
+```text
+.
+|-- index.html
+|-- contact.html
+|-- firebase.json
+|-- functions/
+|   |-- index.js
+|   |-- index.test.js
+|   |-- mail.config.js
+|   |-- package.json
+|   `-- validation.js
+|-- public/
+|   |-- favicon.svg
+|   `-- logo.jpeg
+`-- .github/workflows/firebase-deploy.yml
 ```
