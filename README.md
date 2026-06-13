@@ -4,6 +4,51 @@ Golden Horizon is a Vite landing page for a Toronto live band playing private
 parties, pubs, and bars. Firebase Hosting serves the site and a first-generation
 Firebase HTTPS function sends booking emails.
 
+## Scroll-cinematic experience
+
+`index.html` is a scroll-driven cinematic site. The hero plays a high-end
+cinematic clip as a **scroll-scrubbed image sequence** drawn to a sticky canvas:
+scroll position maps to the frame index, so the camera push-in is controlled by
+the scroll wheel. Two further cinematic sections (`clip1`, `clip2`) render
+dependency-free procedural 3D scenes (a gold particle tunnel and a golden-horizon
+fly-over) that **auto-upgrade to real frame sequences** the moment matching frames
+exist on disk.
+
+The engine is rAF-free-safe: it sizes canvases with a `ResizeObserver`, reveals
+content and animates the hero with CSS transitions/keyframes, and drives scrubbing
+from scroll when `requestAnimationFrame` is throttled — so it still works in
+background tabs and embedded webviews. It also respects `prefers-reduced-motion`.
+
+### Cinematic frames
+
+Frames live in `public/frames/<name>/` alongside a `manifest.json`
+(`{ name, count, width, fps, pattern, base }`) that the site reads to know how
+many frames to preload. The hero master clip is kept at
+`public/media/hero-master.mp4`.
+
+`scripts/slice-frames.mjs` (via `ffmpeg-static`) downloads a rendered clip and
+slices it into an evenly-spaced JPG sequence:
+
+```bash
+# Slice a clip into a named frame sequence
+npm run slice -- --input <url|path> --name hero --fps 15 --width 1200 --quality 4
+```
+
+To activate the two 3D-clip sections with real footage, generate a continuous
+single-shot 1080p clip (e.g. via the Higgsfield MCP), then:
+
+```bash
+npm run slice -- --input <clip1-url> --name clip1
+npm run slice -- --input <clip2-url> --name clip2
+```
+
+The site detects `/frames/clip1/manifest.json` and `/frames/clip2/manifest.json`
+on load and swaps each procedural scene for the real sequence automatically — no
+code change required.
+
+> `index.legacy.html` is the previous single-view site, kept as a backup. It is
+> not a Vite build input, so it is neither built nor deployed.
+
 ## Local development
 
 Install website and function dependencies:
@@ -134,9 +179,12 @@ A Hosting-only service account is not sufficient.
 
 ```text
 .
-|-- index.html
+|-- index.html              # scroll-cinematic landing page
+|-- index.legacy.html       # previous single-view site (backup, not built)
 |-- contact.html
 |-- firebase.json
+|-- scripts/
+|   `-- slice-frames.mjs    # ffmpeg-static frame slicer (npm run slice)
 |-- functions/
 |   |-- index.js
 |   |-- index.test.js
@@ -148,6 +196,10 @@ A Hosting-only service account is not sufficient.
 |-- public/
 |   |-- favicon.svg
 |   |-- logo.jpeg
-|   `-- turnstile-config.json
+|   |-- turnstile-config.json
+|   |-- media/
+|   |   `-- hero-master.mp4 # cinematic hero master clip (fallback)
+|   `-- frames/
+|       `-- hero/           # scroll-scrubbed JPG sequence + manifest.json
 `-- .github/workflows/firebase-deploy.yml
 ```

@@ -1,0 +1,8 @@
+{
+  "name": "hero",
+  "count": 120,
+  "width": 1200,
+  "fps": 15,
+  "pattern": "hero_%04d.jpg",
+  "base": "/frames/hero/"
+}
